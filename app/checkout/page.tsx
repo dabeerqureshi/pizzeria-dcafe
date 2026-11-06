@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { 
   ArrowLeft, CheckCircle2, ShieldCheck, Upload, Copy, Check, 
-  Sparkles, AlertCircle, Phone, MapPin, Building, FileText, Loader2, CreditCard, Banknote
+  Sparkles, AlertCircle, Phone, MapPin, Building, FileText, Loader2, CreditCard, Banknote, Clock8
 } from "lucide-react";
 import { cartStore } from "@/lib/store/cartStore";
 import { orderStore } from "@/lib/store/orderStore";
@@ -14,11 +14,13 @@ import { BANK_ACCOUNTS } from "@/lib/data/menu";
 import { CartItem, PaymentMethod, VerificationResult } from "@/lib/types";
 import { formatPKR } from "@/lib/utils";
 import { MINIMUM_ORDER_AMOUNT } from "@/lib/pricing";
+import { getKitchenStatus, KitchenStatus } from "@/lib/businessHours";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const [items, setItems] = useState<CartItem[]>([]);
   const [totals, setTotals] = useState(cartStore.getTotals());
+  const [kitchenStatus, setKitchenStatus] = useState<KitchenStatus>(getKitchenStatus());
 
   // Form Fields
   const [customerName, setCustomerName] = useState("");
@@ -99,6 +101,11 @@ export default function CheckoutPage() {
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+
+    if (!kitchenStatus.isOpen) {
+      setFormError("Orders are not accepted after 12:00 as per Pizzeria D Café operational rules. Kitchen is currently closed.");
+      return;
+    }
 
     if (items.length === 0) {
       setFormError("Your cart is empty. Please add items to proceed.");
@@ -483,6 +490,19 @@ export default function CheckoutPage() {
               )}
             </div>
 
+            {!kitchenStatus.isOpen && (
+              <div className="rounded-2xl border border-red-500/50 bg-red-950/40 p-4 text-xs text-red-200 space-y-1.5 shadow-lg">
+                <div className="flex items-center gap-2 font-bold text-sm text-red-300">
+                  <Clock8 className="h-4 w-4 text-red-400 shrink-0 animate-bounce" />
+                  <span>Ordering Closed (No orders accepted after 12:00)</span>
+                </div>
+                <p>
+                  As per Pizzeria D Café operational rules, orders cannot be placed after 12:00. 
+                  For advance bookings or questions, please WhatsApp us directly at <strong>0308-4382003</strong>.
+                </p>
+              </div>
+            )}
+
             {formError && (
               <div className="flex items-center gap-2 rounded-2xl border border-red-500/40 bg-red-950/30 p-3.5 text-xs text-red-300">
                 <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
@@ -493,10 +513,16 @@ export default function CheckoutPage() {
             {/* Place Order CTA */}
             <button
               type="submit"
-              disabled={isSubmitting || items.length === 0}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-4 text-sm font-black uppercase tracking-wider text-slate-950 shadow-xl shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500 active:scale-98 transition-all disabled:opacity-50"
+              disabled={isSubmitting || items.length === 0 || !kitchenStatus.isOpen}
+              className={`flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-black uppercase tracking-wider transition-all ${
+                !kitchenStatus.isOpen
+                  ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/60"
+                  : "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-xl shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500 active:scale-98 cursor-pointer"
+              } disabled:opacity-60`}
             >
-              {isSubmitting ? (
+              {!kitchenStatus.isOpen ? (
+                <span>Kitchen Closed - Orders Close After 12:00</span>
+              ) : isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span>Submitting Order...</span>

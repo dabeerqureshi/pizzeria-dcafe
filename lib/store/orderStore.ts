@@ -1,5 +1,6 @@
 import { Order, OrderStatus, PaymentStatus, VerificationResult } from "../types";
 import { isSupabaseConfigured, supabase } from "../supabase";
+import { getKitchenStatus } from "../businessHours";
 
 const ORDERS_STORAGE_KEY = "pizzeria_dcafe_orders_v1";
 const MENU_STOCK_STORAGE_KEY = "pizzeria_dcafe_stock_v1";
@@ -142,6 +143,20 @@ class OrderStore {
             this.notifyStockListeners(current);
           }
         };
+
+        window.addEventListener("pizzeria_order_update", (e: any) => {
+          if (e.detail?.type === "ORDER_UPDATE") {
+            const current = this.getLocalOrders();
+            this.notifyOrderListeners(current);
+          }
+        });
+
+        window.addEventListener("storage", (e) => {
+          if (e.key === ORDERS_STORAGE_KEY) {
+            const current = this.getLocalOrders();
+            this.notifyOrderListeners(current);
+          }
+        });
       } catch {
         // Fallback if BroadcastChannel unavailable
       }
@@ -159,6 +174,10 @@ class OrderStore {
   }
 
   public addOrder(newOrder: Omit<Order, "id" | "orderNumber" | "createdAt">): Order {
+    if (!getKitchenStatus().isOpen) {
+      throw new Error("Orders are not accepted after 12:00. Kitchen is currently closed.");
+    }
+
     const orders = this.getLocalOrders();
     const nextNumber = orders.length > 0 ? Math.max(...orders.map(o => o.orderNumber)) + 1 : 101;
     
@@ -301,6 +320,9 @@ class OrderStore {
     try {
       this.channel?.postMessage(payload);
     } catch {}
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("pizzeria_order_update", { detail: payload }));
+    }
   }
 }
 

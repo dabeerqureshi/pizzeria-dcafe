@@ -63,8 +63,10 @@ export interface CartItem {
 
 export type OrderStatus = 
   | 'pending'
+  | 'accepted'
   | 'confirmed'
   | 'preparing'
+  | 'delivering'
   | 'out_for_delivery'
   | 'delivered'
   | 'cancelled';

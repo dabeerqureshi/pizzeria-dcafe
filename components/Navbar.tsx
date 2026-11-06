@@ -2,14 +2,16 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { Phone, ShoppingBag, UtensilsCrossed, Sparkles } from "lucide-react";
+import { Phone, ShoppingBag, UtensilsCrossed, Sparkles, Clock8 } from "lucide-react";
 import { cartStore } from "@/lib/store/cartStore";
 import { formatPKR } from "@/lib/utils";
+import { getKitchenStatus, KitchenStatus } from "@/lib/businessHours";
 
 export default function Navbar() {
   const [itemCount, setItemCount] = useState(0);
   const [subtotal, setSubtotal] = useState(0);
   const [isBouncing, setIsBouncing] = useState(false);
+  const [kitchenStatus, setKitchenStatus] = useState<KitchenStatus>(getKitchenStatus());
   const prevCountRef = useRef(0);
 
   useEffect(() => {
@@ -25,7 +27,15 @@ export default function Navbar() {
       const totals = cartStore.getTotals();
       setSubtotal(totals.subtotal);
     });
-    return unsub;
+
+    const updateKitchen = () => setKitchenStatus(getKitchenStatus());
+    window.addEventListener("kitchen_status_changed", updateKitchen);
+    updateKitchen();
+
+    return () => {
+      unsub();
+      window.removeEventListener("kitchen_status_changed", updateKitchen);
+    };
   }, []);
 
   return (
@@ -42,9 +52,15 @@ export default function Navbar() {
               <span className="text-xl font-extrabold tracking-tight text-white group-hover:text-amber-400 transition-colors">
                 PIZZERIA D CAFÉ
               </span>
-              <span className="hidden sm:inline-flex rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300 border border-amber-500/30 animate-pulse">
-                Fresh & Hot
-              </span>
+              {kitchenStatus.isOpen ? (
+                <span className="hidden sm:inline-flex rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300 border border-amber-500/30 animate-pulse">
+                  Fresh & Hot
+                </span>
+              ) : (
+                <span className="hidden sm:inline-flex rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-bold text-red-300 border border-red-500/40">
+                  Closed (Past 12)
+                </span>
+              )}
             </div>
             <p className="text-xs text-slate-400">Artisanal Crusts & Fast Food</p>
           </div>

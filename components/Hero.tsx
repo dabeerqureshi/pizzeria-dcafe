@@ -1,10 +1,20 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { ArrowDown, Sparkles, Flame, ShieldCheck, Clock, Award, Star, Pizza } from "lucide-react";
+import { ArrowDown, Sparkles, Flame, ShieldCheck, Clock, Award, Star, Pizza, Clock8 } from "lucide-react";
+import { getKitchenStatus, KitchenStatus } from "@/lib/businessHours";
 
 export default function Hero() {
+  const [kitchenStatus, setKitchenStatus] = useState<KitchenStatus>(getKitchenStatus());
+
+  useEffect(() => {
+    const updateKitchen = () => setKitchenStatus(getKitchenStatus());
+    window.addEventListener("kitchen_status_changed", updateKitchen);
+    updateKitchen();
+    return () => window.removeEventListener("kitchen_status_changed", updateKitchen);
+  }, []);
+
   const scrollToMenu = () => {
     document.getElementById("menu-section")?.scrollIntoView({ behavior: "smooth" });
   };
@@ -34,6 +44,15 @@ export default function Hero() {
             <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto lg:mx-0 leading-relaxed">
               From our legendary <span className="text-amber-400 font-bold underline decoration-amber-500/40 underline-offset-4">Meltzilla Monster 10&quot; Triple Layer</span> and crown-shaped <span className="text-white font-bold">My Crust</span> to double crispy Zingers and loaded Pizza Fries. Handcrafted and delivered piping hot.
             </p>
+
+            {!kitchenStatus.isOpen && (
+              <div className="rounded-2xl border border-red-500/40 bg-red-950/40 p-3.5 text-xs text-red-200 flex items-center gap-2.5 shadow-lg animate-pulse">
+                <Clock8 className="h-4 w-4 text-red-400 shrink-0" />
+                <span>
+                  <strong>Kitchen Currently Closed:</strong> No orders accepted after 12:00. Call <strong>0308-4382003</strong> for advance bookings.
+                </span>
+              </div>
+            )}
 
             {/* Value propositions with hover lifts */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-left">

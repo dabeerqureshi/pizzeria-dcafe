@@ -7,11 +7,13 @@ import { cartStore } from "@/lib/store/cartStore";
 import { CartItem } from "@/lib/types";
 import { formatPKR } from "@/lib/utils";
 import { MINIMUM_ORDER_AMOUNT, FREE_DELIVERY_THRESHOLD } from "@/lib/pricing";
+import { getKitchenStatus, KitchenStatus } from "@/lib/businessHours";
 
 export default function CartDrawer() {
   const [isOpen, setIsOpen] = useState(false);
   const [items, setItems] = useState<CartItem[]>([]);
   const [totals, setTotals] = useState(cartStore.getTotals());
+  const [kitchenStatus, setKitchenStatus] = useState<KitchenStatus>(getKitchenStatus());
 
   useEffect(() => {
     const unsubDrawer = cartStore.subscribeDrawer((open) => setIsOpen(open));
@@ -19,9 +21,14 @@ export default function CartDrawer() {
       setItems(newItems);
       setTotals(cartStore.getTotals());
     });
+    const updateKitchen = () => setKitchenStatus(getKitchenStatus());
+    window.addEventListener("kitchen_status_changed", updateKitchen);
+    updateKitchen();
+
     return () => {
       unsubDrawer();
       unsubCart();
+      window.removeEventListener("kitchen_status_changed", updateKitchen);
     };
   }, []);
 
@@ -221,7 +228,19 @@ export default function CartDrawer() {
               </div>
             </div>
 
-            {totals.isEligibleForDelivery ? (
+            {!kitchenStatus.isOpen ? (
+              <div className="space-y-2">
+                <button
+                  disabled
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-950/60 py-3 text-xs font-bold text-red-300 cursor-not-allowed border border-red-800/60"
+                >
+                  <span>Kitchen Closed (No Orders After 12:00)</span>
+                </button>
+                <p className="text-[10px] text-center text-slate-400">
+                  Opening daily. For advance bookings, WhatsApp 0308-4382003.
+                </p>
+              </div>
+            ) : totals.isEligibleForDelivery ? (
               <Link
                 href="/checkout"
                 onClick={() => cartStore.setDrawerOpen(false)}

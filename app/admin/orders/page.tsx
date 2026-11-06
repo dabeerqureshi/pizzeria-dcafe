@@ -6,12 +6,13 @@ import Image from "next/image";
 import { 
   Volume2, VolumeX, Printer, CheckCircle2, Clock, ChefHat, Bike, 
   Check, X, Eye, Sparkles, AlertTriangle, ArrowRight, RefreshCw, 
-  UtensilsCrossed, ShieldCheck, Phone, MapPin, Search
+  UtensilsCrossed, ShieldCheck, Phone, MapPin, Search, Power, Clock8, AlertCircle
 } from "lucide-react";
 import { orderStore } from "@/lib/store/orderStore";
 import { Order, OrderStatus } from "@/lib/types";
 import { formatPKR } from "@/lib/utils";
 import KitchenSlip from "@/components/admin/KitchenSlip";
+import { getKitchenStatus, setKitchenOverride, setKitchenCutoffMode, KitchenStatus } from "@/lib/businessHours";
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -19,6 +20,7 @@ export default function AdminOrdersPage() {
   const [activeReceiptModalOrder, setActiveReceiptModalOrder] = useState<Order | null>(null);
   const [printingOrder, setPrintingOrder] = useState<Order | null>(null);
   const [searchFilter, setSearchFilter] = useState("");
+  const [kitchenStatus, setKitchenStatus] = useState<KitchenStatus>(getKitchenStatus());
   const prevOrdersCountRef = useRef(0);
 
   // Web Audio Synthesizer for Kitchen Chime (zero asset latency)
@@ -53,7 +55,7 @@ export default function AdminOrdersPage() {
       osc2.start(ctx.currentTime + 0.16);
       osc2.stop(ctx.currentTime + 0.7);
     } catch {
-      // AudioContext could be blocked if user hasn't clicked yet
+      // AudioContext could be blocked if user hasn't interacted yet
     }
   };
 
@@ -66,7 +68,18 @@ export default function AdminOrdersPage() {
       setOrders(newOrders);
     });
 
-    return unsub;
+    const updateStatus = () => {
+      setKitchenStatus(getKitchenStatus());
+    };
+
+    window.addEventListener("kitchen_status_changed", updateStatus);
+    const interval = setInterval(updateStatus, 10000);
+
+    return () => {
+      unsub();
+      window.removeEventListener("kitchen_status_changed", updateStatus);
+      clearInterval(interval);
+    };
   }, [soundEnabled]);
 
   const handleStatusChange = (orderId: string, nextStatus: OrderStatus) => {
@@ -89,8 +102,9 @@ export default function AdminOrdersPage() {
   });
 
   const pendingOrders = filteredOrders.filter(o => o.orderStatus === "pending");
+  const acceptedOrders = filteredOrders.filter(o => o.orderStatus === "accepted" || o.orderStatus === "confirmed");
   const preparingOrders = filteredOrders.filter(o => o.orderStatus === "preparing");
-  const outForDeliveryOrders = filteredOrders.filter(o => o.orderStatus === "out_for_delivery");
+  const deliveringOrders = filteredOrders.filter(o => o.orderStatus === "delivering" || o.orderStatus === "out_for_delivery");
   const deliveredOrders = filteredOrders.filter(o => o.orderStatus === "delivered");
 
   const totalSales = orders
@@ -100,7 +114,7 @@ export default function AdminOrdersPage() {
   return (
     <div className="min-h-screen bg-[#0a0e17] px-4 py-6 sm:px-6 space-y-6">
       {/* Top Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800">
         <div>
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-600/20 text-red-400 border border-red-500/30 shadow-lg shadow-red-500/10">
@@ -119,14 +133,60 @@ export default function AdminOrdersPage() {
                   Live Sync
                 </span>
               </div>
-              <p className="text-xs text-slate-400">Pizzeria D Café Real-Time Order Dispatch Board</p>
+              <p className="text-xs text-slate-400">Pizzeria D Café Real-Time Order Management</p>
             </div>
           </div>
         </div>
 
-        {/* Controls */}
+        {/* Operational Controls & Hours Switch */}
         <div className="flex flex-wrap items-center gap-3">
-          {/* Sound Alert Toggle with Graphic Equalizer Wave Animation */}
+          {/* Kitchen Order Accepting Master Switch */}
+          <div className="flex items-center gap-2 rounded-2xl border border-slate-800 bg-[#121927] p-1.5">
+            <div className="flex items-center gap-1.5 px-2">
+              <span className={`h-2.5 w-2.5 rounded-full ${kitchenStatus.isOpen ? "bg-emerald-400 animate-pulse" : "bg-red-500"}`} />
+              <span className="text-[11px] font-bold text-white">
+                Orders: {kitchenStatus.isOpen ? "OPEN" : "CLOSED (Past 12)"}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1 border-l border-slate-800 pl-1.5">
+              <button
+                onClick={() => setKitchenOverride("auto")}
+                className={`rounded-lg px-2 py-1 text-[10px] font-bold transition-all ${
+                  kitchenStatus.overrideValue === "auto"
+                    ? "bg-amber-500 text-black shadow-sm"
+                    : "text-slate-400 hover:text-white"
+                }`}
+                title="Closes automatically after 12:00"
+              >
+                Auto (12 Cutoff)
+              </button>
+              <button
+                onClick={() => setKitchenOverride("forced_open")}
+                className={`rounded-lg px-2 py-1 text-[10px] font-bold transition-all ${
+                  kitchenStatus.overrideValue === "forced_open"
+                    ? "bg-emerald-500 text-black shadow-sm"
+                    : "text-slate-400 hover:text-white"
+                }`}
+                title="Force keep accepting orders"
+              >
+                Force Open
+              </button>
+              <button
+                onClick={() => setKitchenOverride("forced_closed")}
+                className={`rounded-lg px-2 py-1 text-[10px] font-bold transition-all ${
+                  kitchenStatus.overrideValue === "forced_closed"
+                    ? "bg-red-500 text-white shadow-sm"
+                    : "text-slate-400 hover:text-white"
+                }`}
+                title="Close kitchen immediately"
+              >
+                Stop Orders
+              </button>
+            </div>
+          </div>
+
+          {/* Sound Alert Toggle with Equalizer Wave */}
           <button
             onClick={() => {
               setSoundEnabled(!soundEnabled);
@@ -141,7 +201,6 @@ export default function AdminOrdersPage() {
             {soundEnabled ? (
               <div className="flex items-center gap-1">
                 <Volume2 className="h-4 w-4 text-amber-400" />
-                {/* Audio visualizer wave bars */}
                 <span className="flex items-end gap-0.5 h-3">
                   <span className="w-0.5 bg-amber-400 rounded-full" style={{ animation: "soundWave 0.6s infinite ease-in-out" }} />
                   <span className="w-0.5 bg-amber-400 rounded-full" style={{ animation: "soundWave 0.8s infinite ease-in-out 0.2s" }} />
@@ -151,55 +210,65 @@ export default function AdminOrdersPage() {
             ) : (
               <VolumeX className="h-4 w-4" />
             )}
-            <span>Sound Chime: {soundEnabled ? "ON" : "OFF"}</span>
+            <span>Chime: {soundEnabled ? "ON" : "OFF"}</span>
           </button>
 
-          {/* Test Chime Trigger */}
-          <button
-            onClick={playChime}
-            className="rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white hover:scale-105 active:scale-95 transition-all cursor-pointer"
-            title="Test audio chime"
-          >
-            🔔 Test Ring
-          </button>
-
-          {/* Link to Menu Availability Stock Manager */}
+          {/* Stock Manager Link */}
           <Link
             href="/admin/menu"
             className="rounded-xl bg-slate-800 px-3.5 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 hover:text-white hover:scale-105 transition-all"
           >
-            Manage Stock
+            Stock Toggles
           </Link>
         </div>
       </div>
 
-      {/* Stats Cards with animated hover elevation */}
+      {/* 12:00 Cutoff Operational Banner */}
+      {!kitchenStatus.isOpen && (
+        <div className="rounded-2xl border border-red-500/40 bg-red-950/40 p-3.5 flex items-center justify-between text-xs text-red-200 shadow-lg">
+          <div className="flex items-center gap-2.5">
+            <Clock8 className="h-4 w-4 text-red-400 shrink-0 animate-bounce" />
+            <div>
+              <strong className="text-white">Kitchen Order Cutoff Active: </strong>
+              <span>Customers cannot place orders after 12:00. Checkout is disabled.</span>
+            </div>
+          </div>
+          <button
+            onClick={() => setKitchenOverride("forced_open")}
+            className="rounded-xl bg-red-600 px-3 py-1 text-[11px] font-black text-white hover:bg-red-500 transition-colors cursor-pointer"
+          >
+            Override: Accept Orders Now
+          </button>
+        </div>
+      )}
+
+      {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <div className="rounded-2xl border border-slate-800 bg-[#111724] p-3.5 sm:p-4 hover:border-amber-500/40 hover:-translate-y-0.5 transition-all duration-300">
-          <div className="text-[11px] text-slate-400 font-medium">Active Kitchen Orders</div>
+        <div className="rounded-2xl border border-slate-800 bg-[#111724] p-3.5 sm:p-4">
+          <div className="text-[11px] text-slate-400 font-medium">New / Pending</div>
           <div className="mt-1 font-mono text-xl sm:text-2xl font-black text-amber-400">
-            {pendingOrders.length + preparingOrders.length}
+            {pendingOrders.length}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-[#111724] p-3.5 sm:p-4 hover:border-sky-500/40 hover:-translate-y-0.5 transition-all duration-300">
-          <div className="text-[11px] text-slate-400 font-medium">Out for Delivery</div>
+        <div className="rounded-2xl border border-slate-800 bg-[#111724] p-3.5 sm:p-4">
+          <div className="text-[11px] text-slate-400 font-medium">In Kitchen (Accepted & Baking)</div>
+          <div className="mt-1 font-mono text-xl sm:text-2xl font-black text-red-400">
+            {acceptedOrders.length + preparingOrders.length}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-800 bg-[#111724] p-3.5 sm:p-4">
+          <div className="text-[11px] text-slate-400 font-medium">Delivering by Rider</div>
           <div className="mt-1 font-mono text-xl sm:text-2xl font-black text-sky-400">
-            {outForDeliveryOrders.length}
+            {deliveringOrders.length}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-[#111724] p-3.5 sm:p-4 hover:border-emerald-500/40 hover:-translate-y-0.5 transition-all duration-300">
-          <div className="text-[11px] text-slate-400 font-medium">Total Orders Today</div>
+        <div className="rounded-2xl border border-slate-800 bg-[#111724] p-3.5 sm:p-4">
+          <div className="text-[11px] text-slate-400 font-medium">Delivered Today</div>
           <div className="mt-1 font-mono text-xl sm:text-2xl font-black text-emerald-400">
-            {orders.length}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-800 bg-[#111724] p-3.5 sm:p-4 hover:border-amber-300/40 hover:-translate-y-0.5 transition-all duration-300">
-          <div className="text-[11px] text-slate-400 font-medium">Pipeline Value</div>
-          <div className="mt-1 font-mono text-lg sm:text-xl font-black text-amber-300">
-            {formatPKR(totalSales)}
+            {deliveredOrders.length}
           </div>
         </div>
       </div>
@@ -216,51 +285,65 @@ export default function AdminOrdersPage() {
         />
       </div>
 
-      {/* 4-Column Live Kanban Board */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-        {/* Column 1: New / Pending */}
+      {/* 5-Column Full Status Kanban Board */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        {/* Column 1: New Orders (Pending) */}
         <KanbanColumn
-          title="New Orders"
+          title="1. New Orders"
           badgeColor="bg-amber-500/20 text-amber-400 border-amber-500/30"
           count={pendingOrders.length}
           orders={pendingOrders}
           onStatusChange={handleStatusChange}
           onViewReceipt={(ord) => setActiveReceiptModalOrder(ord)}
           onPrint={(ord) => setPrintingOrder(ord)}
-          actionLabel="Accept & Bake 👨‍🍳"
-          nextStatus="preparing"
+          primaryActionLabel="Accept Order ✓"
+          primaryNextStatus="accepted"
+          showRejectAction
           isPendingColumn
         />
 
-        {/* Column 2: In Kitchen / Preparing */}
+        {/* Column 2: Accepted Orders */}
         <KanbanColumn
-          title="In Kitchen (Baking)"
+          title="2. Accepted"
+          badgeColor="bg-indigo-500/20 text-indigo-300 border-indigo-500/30"
+          count={acceptedOrders.length}
+          orders={acceptedOrders}
+          onStatusChange={handleStatusChange}
+          onViewReceipt={(ord) => setActiveReceiptModalOrder(ord)}
+          onPrint={(ord) => setPrintingOrder(ord)}
+          primaryActionLabel="Start Preparing 👨‍🍳"
+          primaryNextStatus="preparing"
+        />
+
+        {/* Column 3: In Kitchen / Preparing */}
+        <KanbanColumn
+          title="3. In Kitchen (Baking)"
           badgeColor="bg-red-500/20 text-red-400 border-red-500/30"
           count={preparingOrders.length}
           orders={preparingOrders}
           onStatusChange={handleStatusChange}
           onViewReceipt={(ord) => setActiveReceiptModalOrder(ord)}
           onPrint={(ord) => setPrintingOrder(ord)}
-          actionLabel="Send with Rider 🛵"
-          nextStatus="out_for_delivery"
+          primaryActionLabel="Hand to Rider 🛵"
+          primaryNextStatus="delivering"
         />
 
-        {/* Column 3: Out for Delivery */}
+        {/* Column 4: Delivering / Out */}
         <KanbanColumn
-          title="Out for Delivery"
+          title="4. Delivering"
           badgeColor="bg-sky-500/20 text-sky-400 border-sky-500/30"
-          count={outForDeliveryOrders.length}
-          orders={outForDeliveryOrders}
+          count={deliveringOrders.length}
+          orders={deliveringOrders}
           onStatusChange={handleStatusChange}
           onViewReceipt={(ord) => setActiveReceiptModalOrder(ord)}
           onPrint={(ord) => setPrintingOrder(ord)}
-          actionLabel="Mark Delivered ✓"
-          nextStatus="delivered"
+          primaryActionLabel="Mark Delivered 🎉"
+          primaryNextStatus="delivered"
         />
 
-        {/* Column 4: Delivered / Completed */}
+        {/* Column 5: Delivered / Completed */}
         <KanbanColumn
-          title="Completed"
+          title="5. Completed"
           badgeColor="bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
           count={deliveredOrders.length}
           orders={deliveredOrders}
@@ -410,8 +493,9 @@ interface ColumnProps {
   onStatusChange: (orderId: string, status: OrderStatus) => void;
   onViewReceipt: (order: Order) => void;
   onPrint: (order: Order) => void;
-  actionLabel?: string;
-  nextStatus?: OrderStatus;
+  primaryActionLabel?: string;
+  primaryNextStatus?: OrderStatus;
+  showRejectAction?: boolean;
   isCompletedColumn?: boolean;
   isPendingColumn?: boolean;
 }
@@ -424,41 +508,42 @@ function KanbanColumn({
   onStatusChange,
   onViewReceipt,
   onPrint,
-  actionLabel,
-  nextStatus,
+  primaryActionLabel,
+  primaryNextStatus,
+  showRejectAction,
   isCompletedColumn,
   isPendingColumn
 }: ColumnProps) {
   return (
-    <div className="flex flex-col rounded-3xl border border-slate-800 bg-[#0d131f] p-4 min-h-[500px]">
+    <div className="flex flex-col rounded-3xl border border-slate-800 bg-[#0d131f] p-3.5 min-h-[500px]">
       {/* Column Title */}
       <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-        <h3 className="font-extrabold text-white text-sm">{title}</h3>
+        <h3 className="font-extrabold text-white text-xs sm:text-sm">{title}</h3>
         <span className={`rounded-full px-2 py-0.5 text-xs font-bold border ${badgeColor}`}>
           {count}
         </span>
       </div>
 
       {/* Orders List */}
-      <div className="mt-4 flex-1 space-y-3.5 overflow-y-auto pr-1">
+      <div className="mt-3.5 flex-1 space-y-3 overflow-y-auto pr-1">
         {orders.length === 0 ? (
-          <div className="flex h-40 flex-col items-center justify-center text-center text-xs text-slate-500">
-            <span>No orders in this stage</span>
+          <div className="flex h-32 flex-col items-center justify-center text-center text-xs text-slate-500">
+            <span>No orders</span>
           </div>
         ) : (
           orders.map((ord) => (
             <div
               key={ord.id}
-              className={`rounded-2xl border p-4 space-y-3 transition-all duration-300 hover:shadow-xl ${
+              className={`rounded-2xl border p-3.5 space-y-3 transition-all duration-300 hover:shadow-xl ${
                 isPendingColumn
-                  ? "border-amber-500/40 bg-[#121927] hover:border-amber-500 shadow-sm shadow-amber-500/10"
+                  ? "border-amber-500/50 bg-[#121927] hover:border-amber-500 shadow-sm shadow-amber-500/10"
                   : "border-slate-800/90 bg-[#121927] hover:border-slate-700"
               }`}
             >
               {/* Order Card Header */}
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <span className="font-mono text-base font-black text-amber-400">
                       #{ord.orderNumber}
                     </span>
@@ -538,16 +623,48 @@ function KanbanColumn({
                 )}
               </div>
 
-              {/* Next Stage Action Button */}
-              {actionLabel && nextStatus && (
-                <button
-                  type="button"
-                  onClick={() => onStatusChange(ord.id, nextStatus)}
-                  className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 py-2 text-xs font-black uppercase tracking-wider text-slate-950 shadow-md hover:bg-amber-400 hover:scale-[1.02] active:scale-98 transition-all cursor-pointer"
+              {/* Status Quick Switch Dropdown */}
+              <div className="pt-1">
+                <label className="text-[9px] uppercase font-bold text-slate-400 block mb-1">
+                  Change Status Live:
+                </label>
+                <select
+                  value={ord.orderStatus}
+                  onChange={(e) => onStatusChange(ord.id, e.target.value as OrderStatus)}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none"
                 >
-                  <span>{actionLabel}</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </button>
+                  <option value="pending">Pending (New)</option>
+                  <option value="accepted">Accepted</option>
+                  <option value="preparing">Preparing (In Kitchen)</option>
+                  <option value="delivering">Delivering (Out)</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              {/* Primary Next Action Button */}
+              {primaryActionLabel && primaryNextStatus && (
+                <div className="space-y-1.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => onStatusChange(ord.id, primaryNextStatus)}
+                    className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 py-2 text-xs font-black uppercase tracking-wider text-slate-950 shadow-md hover:bg-amber-400 hover:scale-[1.02] active:scale-98 transition-all cursor-pointer"
+                  >
+                    <span>{primaryActionLabel}</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+
+                  {showRejectAction && (
+                    <button
+                      type="button"
+                      onClick={() => onStatusChange(ord.id, "cancelled")}
+                      className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-800/80 py-1.5 text-[11px] font-bold text-red-400 hover:bg-red-950/40 hover:text-red-300 transition-colors cursor-pointer"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      <span>Reject Order</span>
+                    </button>
+                  )}
+                </div>
               )}
 
               {isCompletedColumn && (

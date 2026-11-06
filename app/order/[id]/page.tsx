@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import confetti from "canvas-confetti";
 import { 
   CheckCircle2, Clock, ChefHat, Bike, Home, Phone, ArrowLeft, 
-  MessageSquare, Printer, ShieldCheck, Sparkles, AlertCircle, PartyPopper 
+  MessageSquare, Printer, ShieldCheck, Sparkles, AlertCircle, PartyPopper, Check, XCircle
 } from "lucide-react";
 import { orderStore } from "@/lib/store/orderStore";
 import { Order, OrderStatus } from "@/lib/types";
@@ -16,6 +16,7 @@ export default function OrderTrackingPage() {
   const params = useParams();
   const orderId = params?.id as string;
   const [order, setOrder] = useState<Order | null>(null);
+  const prevStatusRef = useRef<OrderStatus | null>(null);
 
   const fireConfetti = () => {
     try {
@@ -33,12 +34,38 @@ export default function OrderTrackingPage() {
 
     fireConfetti();
 
-    const unsub = orderStore.subscribeOrders((orders) => {
-      const found = orders.find(o => o.id === orderId || String(o.orderNumber) === orderId);
-      if (found) setOrder(found);
+    const fetchOrder = () => {
+      const found = orderStore.getOrderById(orderId);
+      if (found) {
+        if (prevStatusRef.current && prevStatusRef.current !== found.orderStatus) {
+          // Status changed live! Trigger celebratory mini-confetti or sound
+          if (found.orderStatus === "accepted" || found.orderStatus === "delivered") {
+            fireConfetti();
+          }
+        }
+        prevStatusRef.current = found.orderStatus;
+        setOrder(found);
+      }
+    };
+
+    fetchOrder();
+
+    const unsub = orderStore.subscribeOrders(() => {
+      fetchOrder();
     });
 
-    return unsub;
+    // Realtime listeners & heartbeat polling
+    const handleCustomUpdate = () => fetchOrder();
+    window.addEventListener("pizzeria_order_update", handleCustomUpdate);
+    window.addEventListener("storage", handleCustomUpdate);
+    const interval = setInterval(fetchOrder, 2500); // 2.5s live polling
+
+    return () => {
+      unsub();
+      window.removeEventListener("pizzeria_order_update", handleCustomUpdate);
+      window.removeEventListener("storage", handleCustomUpdate);
+      clearInterval(interval);
+    };
   }, [orderId]);
 
   if (!order) {
@@ -60,25 +87,31 @@ export default function OrderTrackingPage() {
     );
   }
 
+  // Exact 5-step lifecycle requested: pending -> accepted -> preparing -> delivering -> delivered
   const steps: { key: OrderStatus; label: string; icon: React.ReactNode; desc: string }[] = [
     { key: "pending", label: "Order Received", icon: <Clock className="h-4 w-4" />, desc: "Waiting kitchen acceptance" },
-    { key: "preparing", label: "In Kitchen", icon: <ChefHat className="h-4 w-4" />, desc: "Baking fresh in oven" },
-    { key: "out_for_delivery", label: "Out for Delivery", icon: <Bike className="h-4 w-4" />, desc: "Rider on the way" },
+    { key: "accepted", label: "Accepted", icon: <Check className="h-4 w-4" />, desc: "Kitchen accepted order" },
+    { key: "preparing", label: "In Kitchen", icon: <ChefHat className="h-4 w-4" />, desc: "Freshly baking in oven" },
+    { key: "delivering", label: "Delivering", icon: <Bike className="h-4 w-4" />, desc: "Rider is on the way" },
     { key: "delivered", label: "Delivered", icon: <Home className="h-4 w-4" />, desc: "Enjoy your hot meal!" },
   ];
 
   const getStepIndex = (status: OrderStatus) => {
     switch (status) {
       case "pending": return 0;
-      case "confirmed": return 0;
-      case "preparing": return 1;
-      case "out_for_delivery": return 2;
-      case "delivered": return 3;
+      case "accepted":
+      case "confirmed": return 1;
+      case "preparing": return 2;
+      case "delivering":
+      case "out_for_delivery": return 3;
+      case "delivered": return 4;
+      case "cancelled": return -1;
       default: return 0;
     }
   };
 
   const currentStep = getStepIndex(order.orderStatus);
+  const isCancelled = order.orderStatus === "cancelled";
 
   // Generate WhatsApp message content for backup
   const itemsText = order.items.map(i => `${i.quantity}x ${i.itemName}${i.sizeName ? ` (${i.sizeName})` : ""}`).join("\n• ");
@@ -89,22 +122,39 @@ export default function OrderTrackingPage() {
     `*Address:* ${order.deliveryAddress}${order.landmark ? ` (Near ${order.landmark})` : ""}\n\n` +
     `*Items:*\n• ${itemsText}\n\n` +
     `*Total:* ${formatPKR(order.totalAmount)} (${order.paymentMethod === "cod" ? "Cash on Delivery" : `Online Transfer${order.verifiedTransactionId ? ` - TID: ${order.verifiedTransactionId}` : ""}`})\n` +
+    `*Status:* ${order.orderStatus.toUpperCase()}\n` +
     `*Order Link:* ${typeof window !== "undefined" ? window.location.href : ""}`
   );
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 space-y-6">
-      {/* Header Banner with celebratory pulse */}
-      <div className="rounded-3xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/40 via-[#121a29] to-[#121a29] p-6 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+      {/* Header Banner */}
+      <div className={`rounded-3xl border p-6 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl transition-all ${
+        isCancelled
+          ? "border-red-500/50 bg-red-950/40 text-red-200"
+          : "border-emerald-500/30 bg-gradient-to-r from-emerald-950/40 via-[#121a29] to-[#121a29]"
+      }`}>
         <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-500/10 animate-badge-pop">
-            <CheckCircle2 className="h-8 w-8 animate-bounce" />
+          <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border shadow-lg ${
+            isCancelled
+              ? "bg-red-500/20 text-red-400 border-red-500/30 shadow-red-500/10"
+              : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shadow-emerald-500/10 animate-badge-pop"
+          }`}>
+            {isCancelled ? <XCircle className="h-8 w-8 text-red-400" /> : <CheckCircle2 className="h-8 w-8 animate-bounce" />}
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl sm:text-2xl font-black text-white">Order #{order.orderNumber}</h2>
-              <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-bold text-emerald-300 border border-emerald-500/30">
-                Confirmed
+              <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold border uppercase ${
+                isCancelled
+                  ? "bg-red-500/20 text-red-300 border-red-500/40"
+                  : order.orderStatus === "delivered"
+                  ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                  : "bg-amber-500/20 text-amber-300 border-amber-500/30 animate-pulse"
+              }`}>
+                {order.orderStatus === "delivering" || order.orderStatus === "out_for_delivery"
+                  ? "Delivering"
+                  : order.orderStatus}
               </span>
             </div>
             <p className="mt-0.5 text-xs text-slate-400">
@@ -113,15 +163,17 @@ export default function OrderTrackingPage() {
           </div>
         </div>
 
-        {/* Buttons: WhatsApp backup & Confetti pop */}
+        {/* Action Buttons */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={fireConfetti}
-            className="flex items-center justify-center h-10 w-10 rounded-2xl border border-slate-700 bg-slate-800 text-amber-400 hover:scale-105 active:scale-95 transition-all cursor-pointer"
-            title="Celebrate!"
-          >
-            <PartyPopper className="h-4 w-4" />
-          </button>
+          {!isCancelled && (
+            <button
+              onClick={fireConfetti}
+              className="flex items-center justify-center h-10 w-10 rounded-2xl border border-slate-700 bg-slate-800 text-amber-400 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              title="Celebrate!"
+            >
+              <PartyPopper className="h-4 w-4" />
+            </button>
+          )}
 
           <a
             href={`https://wa.me/923084382003?text=${waMessage}`}
@@ -130,57 +182,74 @@ export default function OrderTrackingPage() {
             className="flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2.5 text-xs font-black text-white hover:bg-emerald-500 hover:scale-105 shadow-md shadow-emerald-600/20 transition-all active:scale-95"
           >
             <MessageSquare className="h-4 w-4" />
-            <span>Send on WhatsApp</span>
+            <span>WhatsApp Status</span>
           </a>
         </div>
       </div>
 
-      {/* Live Stepper Tracker */}
-      <div className="rounded-3xl border border-slate-800 bg-[#121927] p-6 space-y-6 shadow-xl">
-        <div className="flex items-center justify-between">
-          <h3 className="font-extrabold text-white text-base">Live Kitchen Tracker</h3>
-          <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-400">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+      {/* Cancelled Notice if applicable */}
+      {isCancelled && (
+        <div className="rounded-3xl border border-red-500/40 bg-red-950/20 p-5 text-xs text-red-200 space-y-2">
+          <div className="flex items-center gap-2 font-bold text-sm text-red-300">
+            <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+            <span>Order Cancelled or Rejected</span>
+          </div>
+          <p>
+            Your order could not be completed at this time (e.g. out of delivery area or kitchen closing hour). 
+            If you transferred funds online, our manager will reverse it immediately. 
+            Please call our hotline <strong>0308-4382003</strong> for instant assistance.
+          </p>
+        </div>
+      )}
+
+      {/* Real-time 5-Step Stepper Tracker */}
+      {!isCancelled && (
+        <div className="rounded-3xl border border-slate-800 bg-[#121927] p-6 space-y-6 shadow-xl">
+          <div className="flex items-center justify-between">
+            <h3 className="font-extrabold text-white text-base">Live Kitchen Status</h3>
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-400">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+              </span>
+              <span>Live Updates (Instant)</span>
             </span>
-            <span>Real-time Updates</span>
-          </span>
-        </div>
+          </div>
 
-        {/* Horizontal Stepper with active progress indicator */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {steps.map((st, idx) => {
-            const isCompleted = idx <= currentStep;
-            const isCurrent = idx === currentStep;
+          {/* Stepper Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            {steps.map((st, idx) => {
+              const isCompleted = idx <= currentStep;
+              const isCurrent = idx === currentStep;
 
-            return (
-              <div
-                key={st.key}
-                className={`relative flex flex-col items-center text-center p-3.5 rounded-2xl border transition-all duration-300 ${
-                  isCurrent
-                    ? "border-amber-400 bg-amber-400/10 shadow-lg shadow-amber-400/10 scale-105 animate-pulse-glow"
-                    : isCompleted
-                    ? "border-emerald-500/30 bg-emerald-950/20 text-slate-300"
-                    : "border-slate-800/80 bg-slate-900/40 text-slate-500 opacity-60"
-                }`}
-              >
-                <div className={`flex h-10 w-10 items-center justify-center rounded-xl mb-2 transition-transform ${
-                  isCurrent
-                    ? "bg-amber-500 text-black font-black scale-110 shadow-md"
-                    : isCompleted
-                    ? "bg-emerald-500/20 text-emerald-400"
-                    : "bg-slate-800 text-slate-600"
-                }`}>
-                  {st.icon}
+              return (
+                <div
+                  key={st.key}
+                  className={`relative flex flex-col items-center text-center p-3 rounded-2xl border transition-all duration-300 ${
+                    isCurrent
+                      ? "border-amber-400 bg-amber-400/10 shadow-lg shadow-amber-400/15 scale-105 animate-pulse-glow"
+                      : isCompleted
+                      ? "border-emerald-500/30 bg-emerald-950/20 text-slate-300"
+                      : "border-slate-800/80 bg-slate-900/40 text-slate-500 opacity-50"
+                  }`}
+                >
+                  <div className={`flex h-9 w-9 items-center justify-center rounded-xl mb-2 transition-transform ${
+                    isCurrent
+                      ? "bg-amber-500 text-black font-black scale-110 shadow-md"
+                      : isCompleted
+                      ? "bg-emerald-500/20 text-emerald-400 font-bold"
+                      : "bg-slate-800 text-slate-600"
+                  }`}>
+                    {st.icon}
+                  </div>
+                  <span className="text-[11px] font-bold text-white">{st.label}</span>
+                  <span className="text-[9px] text-slate-400 mt-0.5 leading-tight">{st.desc}</span>
                 </div>
-                <span className="text-xs font-bold text-white">{st.label}</span>
-                <span className="text-[10px] text-slate-400 mt-1">{st.desc}</span>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Order & Payment Details */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

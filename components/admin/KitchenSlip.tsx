@@ -61,8 +61,8 @@ export default function KitchenSlip({ order, onClose }: Props) {
             <span>{order.paymentMethod === "cod" ? "COD" : "ONLINE"}</span>
           </div>
           <div className="flex justify-between">
+            <span>Status: <strong>{order.orderStatus.toUpperCase()}</strong></span>
             <span>Date: {new Date(order.createdAt).toLocaleDateString()}</span>
-            <span>Time: {new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
           </div>
           <div className="pt-1">
             <div><strong>Cust:</strong> {order.customerName}</div>
