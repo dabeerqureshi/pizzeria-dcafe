@@ -131,6 +131,25 @@ export interface PickupSlot {
   availableCapacity: number;
 }
 
+export interface SavedAddress {
+  id: string;
+  label: string; // 'Home' | 'Office' | 'Other'
+  addressLine: string;
+  landmark?: string;
+  isDefault?: boolean;
+}
+
+export interface CustomerProfile {
+  id: string;
+  phone: string;
+  fullName: string;
+  email?: string;
+  addresses: SavedAddress[];
+  defaultAddress?: string;
+  defaultLandmark?: string;
+  createdAt: string;
+}
+
 export interface Order {
   id: string;
   orderNumber: number;

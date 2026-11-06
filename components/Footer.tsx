@@ -93,6 +93,24 @@ export default function Footer() {
               </li>
               <li>
                 <Link
+                  href="/kitchen"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-1.5 font-semibold text-slate-200 hover:border-amber-500/50 hover:bg-slate-800"
+                >
+                  <span className="h-2 w-2 rounded-full bg-amber-400" />
+                  <span>Kitchen Display (KDS)</span>
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/rider"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-1.5 font-semibold text-slate-200 hover:border-sky-500/50 hover:bg-slate-800"
+                >
+                  <span className="h-2 w-2 rounded-full bg-sky-400" />
+                  <span>Rider Dispatch Portal</span>
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/admin/menu"
                   className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-1.5 font-semibold text-slate-200 hover:border-amber-500/50 hover:bg-slate-800"
                 >

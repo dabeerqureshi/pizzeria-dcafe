@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import CartDrawer from "@/components/cart/CartDrawer";
 import DChefBot from "@/components/ai/DChefBot";
 import MobileCartBar from "@/components/cart/MobileCartBar";
+import CustomerAuthModal from "@/components/auth/CustomerAuthModal";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -30,6 +31,7 @@ export default function RootLayout({
         <CartDrawer />
         <DChefBot />
         <MobileCartBar />
+        <CustomerAuthModal />
       </body>
     </html>
   );

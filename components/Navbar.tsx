@@ -3,8 +3,10 @@
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Phone, ShoppingBag, UtensilsCrossed, Sparkles, Clock8 } from "lucide-react";
+import { Phone, ShoppingBag, UtensilsCrossed, Sparkles, Clock8, User, LogOut, ChevronDown } from "lucide-react";
 import { cartStore } from "@/lib/store/cartStore";
+import { customerAuthStore } from "@/lib/store/customerAuthStore";
+import { CustomerProfile } from "@/lib/types";
 import { formatPKR } from "@/lib/utils";
 import { getKitchenStatus, KitchenStatus } from "@/lib/businessHours";
 
@@ -14,6 +16,8 @@ export default function Navbar() {
   const [subtotal, setSubtotal] = useState(0);
   const [isBouncing, setIsBouncing] = useState(false);
   const [kitchenStatus, setKitchenStatus] = useState<KitchenStatus>(getKitchenStatus());
+  const [customer, setCustomer] = useState<CustomerProfile | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const prevCountRef = useRef(0);
 
   useEffect(() => {
@@ -31,12 +35,17 @@ export default function Navbar() {
       setSubtotal(totals.subtotal);
     });
 
+    const unsubAuth = customerAuthStore.subscribe((c) => {
+      setCustomer(c);
+    });
+
     const updateKitchen = () => setKitchenStatus(getKitchenStatus());
     window.addEventListener("kitchen_status_changed", updateKitchen);
     updateKitchen();
 
     return () => {
       unsub();
+      unsubAuth();
       if (bounceTimer) clearTimeout(bounceTimer);
       window.removeEventListener("kitchen_status_changed", updateKitchen);
     };
@@ -98,6 +107,57 @@ export default function Navbar() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
           </Link>
+
+          {/* KFC-Style Customer Account / Login Button */}
+          {customer ? (
+            <div className="relative">
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-xs font-black text-amber-300 hover:bg-amber-500 hover:text-black transition-all cursor-pointer"
+              >
+                <User className="h-3.5 w-3.5" />
+                <span className="max-w-[70px] sm:max-w-[110px] truncate">{customer.fullName}</span>
+                <ChevronDown className="h-3 w-3" />
+              </button>
+
+              {userMenuOpen && (
+                <div 
+                  onClick={() => setUserMenuOpen(false)}
+                  className="absolute right-0 mt-2 w-48 rounded-2xl border border-slate-700 bg-slate-900 p-2 shadow-2xl z-50 text-xs animate-in zoom-in-95 duration-150"
+                >
+                  <div className="px-3 py-2 border-b border-slate-800">
+                    <p className="font-black text-white truncate">{customer.fullName}</p>
+                    <p className="text-[10px] text-slate-400 font-mono">{customer.phone}</p>
+                  </div>
+                  <Link
+                    href="/checkout"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors font-medium"
+                  >
+                    <ShoppingBag className="h-3.5 w-3.5 text-amber-400" />
+                    <span>Proceed to Order</span>
+                  </Link>
+                  <button
+                    onClick={() => {
+                      customerAuthStore.logout();
+                      setUserMenuOpen(false);
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-red-400 hover:bg-red-950/30 rounded-xl transition-colors font-bold cursor-pointer"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => customerAuthStore.setAuthModalOpen(true)}
+              className="flex items-center gap-1 sm:gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 px-2.5 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-xs font-bold text-slate-200 hover:border-amber-500/50 hover:text-white transition-all hover:scale-105 cursor-pointer"
+            >
+              <User className="h-3.5 w-3.5 text-amber-400" />
+              <span>Sign In</span>
+            </button>
+          )}
 
           {/* Cart Button */}
           <button

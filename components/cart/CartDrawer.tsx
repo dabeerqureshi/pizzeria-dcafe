@@ -209,7 +209,7 @@ export default function CartDrawer() {
 
         {/* Footer Summary & Checkout */}
         {items.length > 0 && (
-          <div className="border-t border-slate-800 bg-[#121a29] p-4 sm:p-5 pb-8 sm:pb-5 space-y-3 shrink-0">
+          <div className="border-t border-slate-800 bg-[#121a29] p-4 sm:p-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-5 space-y-3 shrink-0">
             <div className="space-y-1.5 text-xs">
               <div className="flex justify-between text-slate-400">
                 <span>Subtotal</span>
@@ -263,12 +263,19 @@ export default function CartDrawer() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
             ) : (
-              <button
-                disabled
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-800 py-3 text-xs font-bold text-slate-500 cursor-not-allowed border border-slate-700/50"
-              >
-                <span>Min Order Rs. 1,000 Required</span>
-              </button>
+              <div className="space-y-1.5">
+                <Link
+                  href="/checkout"
+                  onClick={() => cartStore.setDrawerOpen(false)}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-500/20 border border-amber-500/40 py-3 text-xs font-black text-amber-300 hover:bg-amber-500 hover:text-black transition-all cursor-pointer"
+                >
+                  <span>Proceed as Branch Pickup (Free)</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <p className="text-[10px] text-center text-slate-400">
+                  Delivery requires Rs. {MINIMUM_ORDER_AMOUNT} min. Pickup is free.
+                </p>
+              </div>
             )}
 
             <button

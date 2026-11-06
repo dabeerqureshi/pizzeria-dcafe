@@ -35,7 +35,7 @@ export default function MobileCartBar() {
   }
 
   return (
-    <div className="fixed bottom-3 left-3 right-3 z-30 md:hidden animate-in slide-in-from-bottom-5 duration-300">
+    <div className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 right-3 z-30 md:hidden animate-in slide-in-from-bottom-5 duration-300">
       <button
         onClick={() => cartStore.setDrawerOpen(true)}
         className="flex w-full items-center justify-between rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 px-4 py-3 text-slate-950 font-black shadow-2xl shadow-amber-500/40 border border-amber-300/40 active:scale-98 transition-all cursor-pointer"

@@ -7,12 +7,13 @@ import Link from "next/link";
 import { 
   ArrowLeft, CheckCircle2, ShieldCheck, Upload, Copy, Check, 
   Sparkles, AlertCircle, Phone, MapPin, Building, FileText, Loader2, CreditCard, Banknote, Clock8,
-  ChevronDown, ShoppingBag, Bike, KeyRound, ShieldAlert
+  ChevronDown, ShoppingBag, Bike, KeyRound, ShieldAlert, User
 } from "lucide-react";
 import { cartStore } from "@/lib/store/cartStore";
 import { orderStore } from "@/lib/store/orderStore";
+import { customerAuthStore } from "@/lib/store/customerAuthStore";
 import { BANK_ACCOUNTS } from "@/lib/data/menu";
-import { CartItem, PaymentMethod, VerificationResult, FulfillmentType } from "@/lib/types";
+import { CartItem, PaymentMethod, VerificationResult, FulfillmentType, CustomerProfile } from "@/lib/types";
 import { formatPKR } from "@/lib/utils";
 import { MINIMUM_ORDER_AMOUNT } from "@/lib/pricing";
 import { getKitchenStatus, setKitchenOverride, KitchenStatus } from "@/lib/businessHours";
@@ -22,16 +23,17 @@ export default function CheckoutPage() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [totals, setTotals] = useState(cartStore.getTotals());
   const [kitchenStatus, setKitchenStatus] = useState<KitchenStatus>(getKitchenStatus());
+  const [customer, setCustomer] = useState<CustomerProfile | null>(customerAuthStore.getCustomer());
 
   // Fulfillment Choice: Delivery vs Pickup
   const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>("delivery");
   const [pickupSlot, setPickupSlot] = useState("ASAP (20-30 mins)");
 
   // Form Fields
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [landmark, setLandmark] = useState("");
+  const [customerName, setCustomerName] = useState(customer?.fullName || "");
+  const [customerPhone, setCustomerPhone] = useState(customer?.phone || "");
+  const [deliveryAddress, setDeliveryAddress] = useState(customer?.defaultAddress || "");
+  const [landmark, setLandmark] = useState(customer?.defaultLandmark || "");
   const [notes, setNotes] = useState("");
 
   // Payment State
@@ -44,7 +46,7 @@ export default function CheckoutPage() {
   const [otpCode, setOtpCode] = useState("");
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
-  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(Boolean(customer));
   const [otpDevHint, setOtpDevHint] = useState<string | null>(null);
   const [otpError, setOtpError] = useState<string | null>(null);
 
@@ -66,7 +68,22 @@ export default function CheckoutPage() {
       setItems(newItems);
       setTotals(cartStore.getTotals());
     });
-    return unsub;
+
+    const unsubAuth = customerAuthStore.subscribe((c) => {
+      setCustomer(c);
+      if (c) {
+        setCustomerName(c.fullName);
+        setCustomerPhone(c.phone);
+        if (c.defaultAddress) setDeliveryAddress(c.defaultAddress);
+        if (c.defaultLandmark) setLandmark(c.defaultLandmark);
+        setIsPhoneVerified(true);
+      }
+    });
+
+    return () => {
+      unsub();
+      unsubAuth();
+    };
   }, []);
 
   // When fulfillment changes to pickup, delivery fee is Rs. 0
@@ -181,6 +198,13 @@ export default function CheckoutPage() {
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+
+    // KFC Style Customer Account Enforced
+    if (!customer) {
+      setFormError("Account required: Please log in or create an account to complete your order.");
+      customerAuthStore.setAuthModalOpen(true);
+      return;
+    }
 
     if (!kitchenStatus.isOpen) {
       setFormError("Orders are not accepted after 12:00 as per Pizzeria D Café operational rules. Kitchen is currently closed.");
@@ -402,14 +426,97 @@ export default function CheckoutPage() {
           <form onSubmit={handleSubmitOrder} className="space-y-6">
             {/* Step 1: Customer & Fulfillment Details */}
             <div className="rounded-3xl border border-slate-800 bg-[#121927] p-5 sm:p-6 space-y-4">
-              <div className="flex items-center gap-2.5 pb-2 border-b border-slate-800">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 font-black text-xs">
-                  1
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 font-black text-xs">
+                    1
+                  </div>
+                  <h3 className="font-extrabold text-white text-base">
+                    {fulfillmentType === "delivery" ? "Delivery Information" : "Pickup Information"}
+                  </h3>
                 </div>
-                <h3 className="font-extrabold text-white text-base">
-                  {fulfillmentType === "delivery" ? "Delivery Information" : "Pickup Information"}
-                </h3>
+                {customer && (
+                  <button
+                    type="button"
+                    onClick={() => customerAuthStore.setAuthModalOpen(true)}
+                    className="text-[11px] font-bold text-amber-400 hover:underline cursor-pointer"
+                  >
+                    Switch Account
+                  </button>
+                )}
               </div>
+
+              {/* KFC App Style: Account Gate Banner */}
+              {!customer ? (
+                <div className="rounded-2xl border-2 border-dashed border-amber-500/40 bg-gradient-to-r from-amber-500/10 to-red-500/10 p-4 sm:p-5 text-center space-y-2.5">
+                  <div className="flex h-11 w-11 mx-auto items-center justify-center rounded-2xl bg-gradient-to-tr from-amber-500 to-red-600 text-slate-950 font-black shadow-lg shadow-amber-500/20">
+                    <User className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-white text-sm sm:text-base">
+                      Customer Account Required (KFC Style)
+                    </h4>
+                    <p className="text-xs text-slate-300 mt-0.5 max-w-md mx-auto">
+                      <strong>First time?</strong> Create your account in 30 seconds.
+                      <br />
+                      <strong>2nd time onwards?</strong> Enter your phone number to login and place order.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => customerAuthStore.setAuthModalOpen(true)}
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer inline-flex items-center gap-2"
+                  >
+                    <User className="h-4 w-4" />
+                    <span>Login or Create Account with Mobile</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between p-3 rounded-2xl border border-emerald-500/30 bg-emerald-950/20 text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 font-bold">
+                      <CheckCircle2 className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-emerald-400">Logged in Customer</span>
+                      <h4 className="font-black text-white">{customer.fullName} ({customer.phone})</h4>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-mono">1-Tap Fast Checkout</span>
+                </div>
+              )}
+
+              {/* Saved Address Quick Selector (For Returning Customers) */}
+              {customer && customer.addresses && customer.addresses.length > 0 && fulfillmentType === "delivery" && (
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-xs font-bold text-slate-300">
+                    Select from Saved Addresses:
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {customer.addresses.map((addr) => {
+                      const isSelected = deliveryAddress === addr.addressLine;
+                      return (
+                        <button
+                          key={addr.id}
+                          type="button"
+                          onClick={() => {
+                            setDeliveryAddress(addr.addressLine);
+                            if (addr.landmark) setLandmark(addr.landmark);
+                          }}
+                          className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                            isSelected
+                              ? "bg-amber-500 text-slate-950 border-amber-500 shadow-sm"
+                              : "bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-500"
+                          }`}
+                        >
+                          <MapPin className="h-3.5 w-3.5 text-red-400" />
+                          <span>{addr.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
