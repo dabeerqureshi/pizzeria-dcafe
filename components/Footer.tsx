@@ -5,7 +5,7 @@ import { Phone, MapPin, Clock, ShieldCheck, Heart } from "lucide-react";
 export default function Footer() {
   return (
     <footer className="mt-auto border-t border-slate-800 bg-[#0c121d] text-slate-400 text-xs">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+      <div className="mx-auto max-w-7xl px-4 pt-10 pb-24 md:py-12 sm:px-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Col 1: Brand */}
           <div className="space-y-3">
@@ -69,7 +69,7 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Clock className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-                <span>Open Daily: 2:00 PM – 3:00 AM</span>
+                <span>Open Daily (Orders close at 12:00)</span>
               </li>
               <li className="flex items-center gap-2">
                 <MapPin className="h-3.5 w-3.5 text-amber-400 shrink-0" />

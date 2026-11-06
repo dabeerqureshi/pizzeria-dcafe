@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import confetti from "canvas-confetti";
+import { usePathname } from "next/navigation";
 import { Sparkles, MessageSquare, X, Send, Bot, ChefHat, Plus, Check } from "lucide-react";
 import { cartStore } from "@/lib/store/cartStore";
 import { MENU_ITEMS } from "@/lib/data/menu";
@@ -27,10 +27,23 @@ const QUICK_PROMPTS = [
 ];
 
 export default function DChefBot() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [hasCartItems, setHasCartItems] = useState(false);
   const [addedItemIds, setAddedItemIds] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const unsub = cartStore.subscribe((items) => {
+      setHasCartItems(items.length > 0);
+    });
+    return unsub;
+  }, []);
+
+  if (pathname.startsWith("/admin") || pathname.startsWith("/kitchen") || pathname.startsWith("/rider")) {
+    return null;
+  }
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "msg-welcome",
@@ -95,7 +108,7 @@ export default function DChefBot() {
     }
   };
 
-  const handleAddToCart = (sItem: { id: string; name: string; price: number; sizeName?: string }) => {
+  const handleAddToCart = async (sItem: { id: string; name: string; price: number; sizeName?: string }) => {
     const found = MENU_ITEMS.find((m) => m.id === sItem.id);
     const variant = found?.variants?.find((v) => v.sizeName.toLowerCase().includes(sItem.sizeName?.toLowerCase() || "medium")) || found?.variants?.[0];
 
@@ -107,14 +120,17 @@ export default function DChefBot() {
       quantity: 1,
     });
 
-    try {
-      confetti({
-        particleCount: 40,
-        spread: 60,
-        origin: { y: 0.85, x: 0.85 },
-        colors: ["#f59e0b", "#ef4444", "#ffffff"],
-      });
-    } catch {}
+    if (typeof window !== "undefined") {
+      try {
+        const confetti = (await import("canvas-confetti")).default;
+        confetti({
+          particleCount: 40,
+          spread: 60,
+          origin: { y: 0.85, x: 0.85 },
+          colors: ["#f59e0b", "#ef4444", "#ffffff"],
+        });
+      } catch {}
+    }
 
     setAddedItemIds((prev) => ({ ...prev, [sItem.id]: true }));
     setTimeout(() => {
@@ -128,7 +144,9 @@ export default function DChefBot() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-red-600 p-3.5 sm:px-5 sm:py-3.5 text-slate-950 font-black text-xs shadow-2xl shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all cursor-pointer group animate-pulse-glow"
+          className={`fixed z-40 flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-red-600 p-3 sm:px-4 sm:py-3 text-slate-950 font-black text-xs shadow-2xl shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all cursor-pointer group animate-pulse-glow right-3.5 sm:right-6 ${
+            hasCartItems ? "bottom-20 md:bottom-6" : "bottom-5 md:bottom-6"
+          }`}
           aria-label="Ask D-Chef AI"
         >
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-black/20 group-hover:rotate-12 transition-transform">
@@ -143,7 +161,7 @@ export default function DChefBot() {
 
       {/* Slide-up Chat Panel */}
       {isOpen && (
-        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex h-[540px] w-[92vw] sm:w-[400px] flex-col rounded-3xl border border-slate-700 bg-[#0f1725]/95 shadow-2xl shadow-black/80 backdrop-blur-md overflow-hidden animate-in slide-in-from-bottom-6 duration-300">
+        <div className="fixed inset-x-2 bottom-2 sm:inset-x-auto sm:bottom-6 sm:right-6 z-50 flex h-[82vh] sm:h-[540px] w-auto sm:w-[400px] flex-col rounded-3xl border border-slate-700 bg-[#0f1725]/95 shadow-2xl shadow-black/80 backdrop-blur-md overflow-hidden animate-in slide-in-from-bottom-6 duration-300">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-800 bg-[#141e30] px-4 py-3.5">
             <div className="flex items-center gap-2.5">

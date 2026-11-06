@@ -91,15 +91,45 @@ export function getKitchenStatus(): KitchenStatus {
   };
 }
 
+export function isWithinOperationalHours(): boolean {
+  return getKitchenStatus().isOpen;
+}
+
 export function setKitchenOverride(status: "auto" | "forced_open" | "forced_closed"): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(KITCHEN_OVERRIDE_KEY, status);
   window.dispatchEvent(new Event("kitchen_status_changed"));
+  try {
+    const bc = new BroadcastChannel("pizzeria_dcafe_realtime");
+    bc.postMessage({ type: "KITCHEN_STATUS_UPDATE" });
+  } catch {}
 }
 
 export function setKitchenCutoffMode(mode: "12_midnight" | "12_noon"): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(KITCHEN_CUTOFF_MODE_KEY, mode);
   window.dispatchEvent(new Event("kitchen_status_changed"));
+  try {
+    const bc = new BroadcastChannel("pizzeria_dcafe_realtime");
+    bc.postMessage({ type: "KITCHEN_STATUS_UPDATE" });
+  } catch {}
+}
+
+// Global browser listener to keep all tabs in sync
+if (typeof window !== "undefined") {
+  try {
+    const bc = new BroadcastChannel("pizzeria_dcafe_realtime");
+    bc.onmessage = (e) => {
+      if (e.data?.type === "KITCHEN_STATUS_UPDATE") {
+        window.dispatchEvent(new Event("kitchen_status_changed"));
+      }
+    };
+  } catch {}
+
+  window.addEventListener("storage", (e) => {
+    if (e.key === KITCHEN_OVERRIDE_KEY || e.key === KITCHEN_CUTOFF_MODE_KEY) {
+      window.dispatchEvent(new Event("kitchen_status_changed"));
+    }
+  });
 }
 

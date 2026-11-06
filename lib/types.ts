@@ -20,14 +20,14 @@ export interface Category {
 
 export interface ItemVariant {
   id: string;
-  sizeName: string; // 'Small' | 'Medium' | 'Large' | 'Regular' | 'Max' | '5 pcs' | '10 pcs'
+  sizeName: string;
   price: number;
 }
 
 export interface ItemAddon {
   id: string;
   name: string;
-  price: number; // e.g. Extra Cheese Rs. 250
+  price: number;
 }
 
 export interface MenuItem {
@@ -51,7 +51,7 @@ export interface CartItemAddon {
 }
 
 export interface CartItem {
-  id: string; // unique cart line item id
+  id: string;
   menuItemId: string;
   name: string;
   variant?: ItemVariant;
@@ -61,18 +61,25 @@ export interface CartItem {
   specialInstructions?: string;
 }
 
+export type FulfillmentType = 'delivery' | 'pickup';
+
 export type OrderStatus = 
   | 'pending'
+  | 'pending_payment'
+  | 'pending_confirmation'
   | 'accepted'
   | 'confirmed'
   | 'preparing'
+  | 'ready_for_dispatch'
   | 'delivering'
   | 'out_for_delivery'
   | 'delivered'
-  | 'cancelled';
+  | 'picked_up'
+  | 'cancelled'
+  | 'failed_delivery';
 
-export type PaymentMethod = 'cod' | 'online_transfer';
-export type PaymentStatus = 'unpaid' | 'proof_submitted' | 'verified' | 'failed';
+export type PaymentMethod = 'cod' | 'online' | 'online_transfer';
+export type PaymentStatus = 'unpaid' | 'pending_payment' | 'proof_submitted' | 'verified' | 'paid' | 'failed' | 'refunded';
 
 export interface VerificationResult {
   matched: boolean;
@@ -85,15 +92,60 @@ export interface VerificationResult {
   bankName?: string;
 }
 
+export interface Rider {
+  id: string;
+  riderName: string;
+  phone: string;
+  vehicleNumber?: string;
+  currentStatus: 'offline' | 'available' | 'delivering' | 'settling_shift';
+  activeOrdersCount: number;
+}
+
+export interface CodSettlement {
+  id: string;
+  riderId: string;
+  riderName: string;
+  shiftDate: string;
+  totalDeliveredOrders: number;
+  expectedCash: number;
+  handedOverCash: number;
+  discrepancy: number;
+  settledByManager: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface DeliveryZone {
+  id: string;
+  zoneName: string;
+  minOrderAmount: number;
+  freeDeliveryThreshold: number;
+  deliveryFee: number;
+  estimatedDeliveryMins: number;
+  maxRadiusKm?: number;
+}
+
+export interface PickupSlot {
+  timeString: string;
+  formattedTime: string;
+  availableCapacity: number;
+}
+
 export interface Order {
   id: string;
   orderNumber: number;
+  idempotencyKey?: string;
   customerName: string;
   customerPhone: string;
-  deliveryAddress: string;
+  fulfillmentType: FulfillmentType;
+  deliveryAddress?: string;
   landmark?: string;
+  zoneId?: string;
+  pickupCode?: string;
+  scheduledFor?: string;
   subtotal: number;
   deliveryFee: number;
+  discountAmount?: number;
   totalAmount: number;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
@@ -102,6 +154,8 @@ export interface Order {
   verificationDetails?: VerificationResult;
   orderStatus: OrderStatus;
   notes?: string;
+  riderId?: string;
+  assignedRiderName?: string;
   items: {
     id: string;
     menuItemId: string;
@@ -115,4 +169,3 @@ export interface Order {
   createdAt: string;
   updatedAt?: string;
 }
-

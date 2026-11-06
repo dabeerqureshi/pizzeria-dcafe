@@ -12,6 +12,7 @@ export default function PrintOrderPage() {
   const router = useRouter();
   const orderId = params?.id as string;
   const [order, setOrder] = useState<Order | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     if (!orderId) return;
@@ -23,12 +24,28 @@ export default function PrintOrderPage() {
         window.print();
       }, 500);
       return () => clearTimeout(timer);
+    } else {
+      setNotFound(true);
     }
   }, [orderId]);
 
+  if (notFound) {
+    return (
+      <div className="min-h-screen bg-[#0b0f17] p-8 flex flex-col items-center justify-center text-center space-y-3">
+        <p className="text-white text-sm font-bold">Order #{orderId} could not be found.</p>
+        <button
+          onClick={() => router.push("/admin/orders")}
+          className="rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-black"
+        >
+          Return to Kitchen POS
+        </button>
+      </div>
+    );
+  }
+
   if (!order) {
     return (
-      <div className="p-8 text-center text-white text-xs">
+      <div className="min-h-screen bg-[#0b0f17] p-8 flex items-center justify-center text-white text-xs">
         Finding order for print...
       </div>
     );

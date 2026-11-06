@@ -3,10 +3,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { 
   Volume2, VolumeX, Printer, CheckCircle2, Clock, ChefHat, Bike, 
   Check, X, Eye, Sparkles, AlertTriangle, ArrowRight, RefreshCw, 
-  UtensilsCrossed, ShieldCheck, Phone, MapPin, Search, Power, Clock8, AlertCircle
+  UtensilsCrossed, ShieldCheck, Phone, MapPin, Search, Power, Clock8, AlertCircle, LogOut
 } from "lucide-react";
 import { orderStore } from "@/lib/store/orderStore";
 import { Order, OrderStatus } from "@/lib/types";
@@ -15,6 +16,7 @@ import KitchenSlip from "@/components/admin/KitchenSlip";
 import { getKitchenStatus, setKitchenOverride, setKitchenCutoffMode, KitchenStatus } from "@/lib/businessHours";
 
 export default function AdminOrdersPage() {
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [activeReceiptModalOrder, setActiveReceiptModalOrder] = useState<Order | null>(null);
@@ -22,6 +24,16 @@ export default function AdminOrdersPage() {
   const [searchFilter, setSearchFilter] = useState("");
   const [kitchenStatus, setKitchenStatus] = useState<KitchenStatus>(getKitchenStatus());
   const prevOrdersCountRef = useRef(0);
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/admin/logout", { method: "POST" });
+      router.push("/admin/login");
+      router.refresh();
+    } catch {
+      router.push("/admin/login");
+    }
+  };
 
   // Web Audio Synthesizer for Kitchen Chime (zero asset latency)
   const playChime = () => {
@@ -91,6 +103,12 @@ export default function AdminOrdersPage() {
     setActiveReceiptModalOrder(null);
   };
 
+  const handleDeleteOrder = (orderId: string) => {
+    if (typeof window !== "undefined" && window.confirm("Are you sure you want to archive and dismiss this order from the board?")) {
+      orderStore.deleteOrder(orderId);
+    }
+  };
+
   const filteredOrders = orders.filter((o) => {
     const q = searchFilter.toLowerCase();
     return (
@@ -139,20 +157,20 @@ export default function AdminOrdersPage() {
         </div>
 
         {/* Operational Controls & Hours Switch */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 w-full lg:w-auto">
           {/* Kitchen Order Accepting Master Switch */}
-          <div className="flex items-center gap-2 rounded-2xl border border-slate-800 bg-[#121927] p-1.5">
-            <div className="flex items-center gap-1.5 px-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 rounded-2xl border border-slate-800 bg-[#121927] p-1.5 w-full sm:w-auto">
+            <div className="flex items-center gap-1.5 px-2 py-0.5">
               <span className={`h-2.5 w-2.5 rounded-full ${kitchenStatus.isOpen ? "bg-emerald-400 animate-pulse" : "bg-red-500"}`} />
               <span className="text-[11px] font-bold text-white">
                 Orders: {kitchenStatus.isOpen ? "OPEN" : "CLOSED (Past 12)"}
               </span>
             </div>
 
-            <div className="flex items-center gap-1 border-l border-slate-800 pl-1.5">
+            <div className="flex items-center gap-1 border-t sm:border-t-0 sm:border-l border-slate-800 pt-1 sm:pt-0 sm:pl-1.5 w-full sm:w-auto justify-between sm:justify-start">
               <button
                 onClick={() => setKitchenOverride("auto")}
-                className={`rounded-lg px-2 py-1 text-[10px] font-bold transition-all ${
+                className={`flex-1 sm:flex-none rounded-lg px-2 py-1 text-[10px] font-bold transition-all text-center ${
                   kitchenStatus.overrideValue === "auto"
                     ? "bg-amber-500 text-black shadow-sm"
                     : "text-slate-400 hover:text-white"
@@ -163,7 +181,7 @@ export default function AdminOrdersPage() {
               </button>
               <button
                 onClick={() => setKitchenOverride("forced_open")}
-                className={`rounded-lg px-2 py-1 text-[10px] font-bold transition-all ${
+                className={`flex-1 sm:flex-none rounded-lg px-2 py-1 text-[10px] font-bold transition-all text-center ${
                   kitchenStatus.overrideValue === "forced_open"
                     ? "bg-emerald-500 text-black shadow-sm"
                     : "text-slate-400 hover:text-white"
@@ -174,7 +192,7 @@ export default function AdminOrdersPage() {
               </button>
               <button
                 onClick={() => setKitchenOverride("forced_closed")}
-                className={`rounded-lg px-2 py-1 text-[10px] font-bold transition-all ${
+                className={`flex-1 sm:flex-none rounded-lg px-2 py-1 text-[10px] font-bold transition-all text-center ${
                   kitchenStatus.overrideValue === "forced_closed"
                     ? "bg-red-500 text-white shadow-sm"
                     : "text-slate-400 hover:text-white"
@@ -186,40 +204,74 @@ export default function AdminOrdersPage() {
             </div>
           </div>
 
-          {/* Sound Alert Toggle with Equalizer Wave */}
-          <button
-            onClick={() => {
-              setSoundEnabled(!soundEnabled);
-              if (!soundEnabled) playChime();
-            }}
-            className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all border cursor-pointer hover:scale-105 active:scale-95 ${
-              soundEnabled
-                ? "border-amber-500/40 bg-amber-500/10 text-amber-300 shadow-sm shadow-amber-500/20"
-                : "border-slate-800 bg-slate-900 text-slate-400 hover:text-white"
-            }`}
-          >
-            {soundEnabled ? (
-              <div className="flex items-center gap-1">
-                <Volume2 className="h-4 w-4 text-amber-400" />
-                <span className="flex items-end gap-0.5 h-3">
-                  <span className="w-0.5 bg-amber-400 rounded-full" style={{ animation: "soundWave 0.6s infinite ease-in-out" }} />
-                  <span className="w-0.5 bg-amber-400 rounded-full" style={{ animation: "soundWave 0.8s infinite ease-in-out 0.2s" }} />
-                  <span className="w-0.5 bg-amber-400 rounded-full" style={{ animation: "soundWave 0.7s infinite ease-in-out 0.4s" }} />
-                </span>
-              </div>
-            ) : (
-              <VolumeX className="h-4 w-4" />
-            )}
-            <span>Chime: {soundEnabled ? "ON" : "OFF"}</span>
-          </button>
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
+            {/* Sound Alert Toggle with Equalizer Wave */}
+            <button
+              onClick={() => {
+                setSoundEnabled(!soundEnabled);
+                if (!soundEnabled) playChime();
+              }}
+              className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold transition-all border cursor-pointer hover:scale-105 active:scale-95 ${
+                soundEnabled
+                  ? "border-amber-500/40 bg-amber-500/10 text-amber-300 shadow-sm shadow-amber-500/20"
+                  : "border-slate-800 bg-slate-900 text-slate-400 hover:text-white"
+              }`}
+            >
+              {soundEnabled ? (
+                <div className="flex items-center gap-1">
+                  <Volume2 className="h-4 w-4 text-amber-400" />
+                  <span className="flex items-end gap-0.5 h-3">
+                    <span className="w-0.5 bg-amber-400 rounded-full" style={{ animation: "soundWave 0.6s infinite ease-in-out" }} />
+                    <span className="w-0.5 bg-amber-400 rounded-full" style={{ animation: "soundWave 0.8s infinite ease-in-out 0.2s" }} />
+                    <span className="w-0.5 bg-amber-400 rounded-full" style={{ animation: "soundWave 0.7s infinite ease-in-out 0.4s" }} />
+                  </span>
+                </div>
+              ) : (
+                <VolumeX className="h-4 w-4" />
+              )}
+              <span>Chime</span>
+            </button>
 
-          {/* Stock Manager Link */}
-          <Link
-            href="/admin/menu"
-            className="rounded-xl bg-slate-800 px-3.5 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 hover:text-white hover:scale-105 transition-all"
-          >
-            Stock Toggles
-          </Link>
+            {/* Quick Operational Navigation */}
+            <Link
+              href="/kitchen"
+              className="rounded-xl bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500 hover:text-black hover:scale-105 transition-all text-center"
+            >
+              Kitchen KDS
+            </Link>
+
+            <Link
+              href="/rider"
+              className="rounded-xl bg-sky-500/10 border border-sky-500/30 px-3 py-2 text-xs font-bold text-sky-400 hover:bg-sky-500 hover:text-black hover:scale-105 transition-all text-center"
+            >
+              Rider Portal
+            </Link>
+
+            <Link
+              href="/admin/settlements"
+              className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-3 py-2 text-xs font-bold text-emerald-300 hover:bg-emerald-500 hover:text-black hover:scale-105 transition-all text-center"
+            >
+              COD Settlements
+            </Link>
+
+            {/* Stock Manager Link */}
+            <Link
+              href="/admin/menu"
+              className="rounded-xl bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 hover:text-white hover:scale-105 transition-all text-center"
+            >
+              Stock
+            </Link>
+
+            {/* Sign Out Button */}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 rounded-xl border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-900/40 hover:text-red-200 transition-all cursor-pointer"
+              title="Sign out of POS"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -286,7 +338,7 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* 5-Column Full Status Kanban Board */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="flex gap-4 overflow-x-auto pb-6 pt-1 scrollbar-none snap-x items-start">
         {/* Column 1: New Orders (Pending) */}
         <KanbanColumn
           title="1. New Orders"
@@ -350,14 +402,21 @@ export default function AdminOrdersPage() {
           onStatusChange={handleStatusChange}
           onViewReceipt={(ord) => setActiveReceiptModalOrder(ord)}
           onPrint={(ord) => setPrintingOrder(ord)}
+          onDelete={handleDeleteOrder}
           isCompletedColumn
         />
       </div>
 
       {/* Receipt & AI Verification Inspection Modal */}
       {activeReceiptModalOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-2xl rounded-3xl border border-slate-700 bg-[#121927] p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+        <div 
+          onClick={() => setActiveReceiptModalOrder(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-2xl rounded-3xl border border-slate-700 bg-[#121927] p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200"
+          >
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div>
                 <h3 className="font-extrabold text-white text-base">
@@ -385,6 +444,9 @@ export default function AdminOrdersPage() {
                       src={activeReceiptModalOrder.paymentReceiptUrl}
                       alt="Payment Receipt"
                       fill
+                      onError={(e) => {
+                        (e.target as any).src = "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&auto=format&fit=crop&q=80";
+                      }}
                       className="object-contain"
                     />
                   ) : (
@@ -471,8 +533,14 @@ export default function AdminOrdersPage() {
 
       {/* Kitchen Slip Print Modal */}
       {printingOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-700 bg-slate-900 p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+        <div 
+          onClick={() => setPrintingOrder(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-700 bg-slate-900 p-6 shadow-2xl animate-in zoom-in-95 duration-200"
+          >
             <KitchenSlip
               order={printingOrder}
               onClose={() => setPrintingOrder(null)}
@@ -493,6 +561,7 @@ interface ColumnProps {
   onStatusChange: (orderId: string, status: OrderStatus) => void;
   onViewReceipt: (order: Order) => void;
   onPrint: (order: Order) => void;
+  onDelete?: (orderId: string) => void;
   primaryActionLabel?: string;
   primaryNextStatus?: OrderStatus;
   showRejectAction?: boolean;
@@ -508,6 +577,7 @@ function KanbanColumn({
   onStatusChange,
   onViewReceipt,
   onPrint,
+  onDelete,
   primaryActionLabel,
   primaryNextStatus,
   showRejectAction,
@@ -515,7 +585,7 @@ function KanbanColumn({
   isPendingColumn
 }: ColumnProps) {
   return (
-    <div className="flex flex-col rounded-3xl border border-slate-800 bg-[#0d131f] p-3.5 min-h-[500px]">
+    <div className="flex flex-col rounded-3xl border border-slate-800 bg-[#0d131f] p-3.5 min-h-[550px] w-[310px] sm:w-[330px] shrink-0 snap-start">
       {/* Column Title */}
       <div className="flex items-center justify-between pb-3 border-b border-slate-800">
         <h3 className="font-extrabold text-white text-xs sm:text-sm">{title}</h3>
@@ -543,13 +613,22 @@ function KanbanColumn({
               {/* Order Card Header */}
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-mono text-base font-black text-amber-400">
                       #{ord.orderNumber}
                     </span>
                     <span className="text-[10px] text-slate-400">
                       {new Date(ord.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </span>
+                    {ord.fulfillmentType === "pickup" ? (
+                      <span className="rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.2 text-[9px] font-black uppercase">
+                        Pickup: {ord.pickupCode || "Counter"}
+                      </span>
+                    ) : (
+                      <span className="rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 px-1.5 py-0.2 text-[9px] font-black uppercase">
+                        Delivery
+                      </span>
+                    )}
                   </div>
                   <div className="font-bold text-white text-xs mt-0.5">{ord.customerName}</div>
                 </div>
@@ -557,7 +636,7 @@ function KanbanColumn({
                 {/* Print Slip Icon Button */}
                 <button
                   onClick={() => onPrint(ord)}
-                  className="rounded-xl border border-slate-700 bg-slate-800 p-1.5 text-slate-300 hover:bg-amber-500 hover:text-black hover:scale-110 active:scale-95 transition-all cursor-pointer"
+                  className="rounded-xl border border-slate-700 bg-slate-800 p-1.5 text-slate-300 hover:bg-amber-500 hover:text-black hover:scale-110 active:scale-95 transition-all cursor-pointer shrink-0"
                   title="Print 80mm Kitchen Order Ticket"
                 >
                   <Printer className="h-4 w-4" />
@@ -629,7 +708,7 @@ function KanbanColumn({
                   Change Status Live:
                 </label>
                 <select
-                  value={ord.orderStatus}
+                  value={ord.orderStatus === "out_for_delivery" ? "delivering" : ord.orderStatus === "confirmed" ? "accepted" : ord.orderStatus}
                   onChange={(e) => onStatusChange(ord.id, e.target.value as OrderStatus)}
                   className="w-full rounded-xl border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none"
                 >
@@ -668,9 +747,20 @@ function KanbanColumn({
               )}
 
               {isCompletedColumn && (
-                <div className="flex items-center justify-center gap-1.5 py-1 text-[11px] font-bold text-emerald-400">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>Delivered & Closed</span>
+                <div className="flex items-center justify-between pt-1 border-t border-slate-800/60">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-400">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Delivered</span>
+                  </div>
+                  {onDelete && (
+                    <button
+                      type="button"
+                      onClick={() => onDelete(ord.id)}
+                      className="text-[10px] text-slate-500 hover:text-red-400 font-semibold transition-colors cursor-pointer"
+                    >
+                      Archive / Dismiss
+                    </button>
+                  )}
                 </div>
               )}
             </div>

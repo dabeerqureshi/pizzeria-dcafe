@@ -19,9 +19,11 @@ export default function ItemCustomizeModal({ item, onClose }: Props) {
   const [extraChicken, setExtraChicken] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [instructions, setInstructions] = useState("");
+  const [imgSrc, setImgSrc] = useState(item?.image || "");
 
   useEffect(() => {
     if (item) {
+      setImgSrc(item.image);
       if (item.variants && item.variants.length > 0) {
         // default to medium if available or first
         const defaultVar = item.variants.find(v => v.sizeName.toLowerCase().includes("medium")) || item.variants[0];
@@ -33,7 +35,14 @@ export default function ItemCustomizeModal({ item, onClose }: Props) {
       setExtraChicken(false);
       setQuantity(1);
       setInstructions("");
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
     }
+
+    return () => {
+      document.body.style.overflow = "unset";
+    };
   }, [item]);
 
   if (!item) return null;
@@ -73,11 +82,17 @@ export default function ItemCustomizeModal({ item, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
+    >
       <div 
-        className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-slate-700/80 bg-[#121926] shadow-2xl"
+        className="relative w-full max-w-lg overflow-hidden rounded-t-[32px] sm:rounded-3xl border-t sm:border border-slate-700/80 bg-[#121926] shadow-2xl max-h-[92vh] sm:max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-5 sm:zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Mobile drag handle */}
+        <div className="sm:hidden mx-auto mt-2.5 h-1.5 w-12 rounded-full bg-slate-600/80" />
+
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -87,13 +102,13 @@ export default function ItemCustomizeModal({ item, onClose }: Props) {
         </button>
 
         {/* Item Header Image */}
-        <div className="relative h-48 w-full bg-slate-900">
+        <div className="relative h-36 sm:h-48 w-full bg-slate-900 shrink-0">
           <Image
-            src={item.image}
+            src={imgSrc || "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=80"}
             alt={item.name}
             fill
-            onError={(e) => {
-              (e.target as any).src = "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=80";
+            onError={() => {
+              setImgSrc("https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=80");
             }}
             className="object-cover"
           />
@@ -106,7 +121,7 @@ export default function ItemCustomizeModal({ item, onClose }: Props) {
         </div>
 
         {/* Content Body */}
-        <div className="max-h-[60vh] overflow-y-auto px-6 py-4 space-y-5">
+        <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-4">
           <div>
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-extrabold text-white">{item.name}</h3>

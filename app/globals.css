@@ -7,11 +7,17 @@
   --foreground: #f8fafc;
 }
 
+html {
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Custom scrollbars */
@@ -28,6 +34,23 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #f59e0b;
+}
+
+/* Hide scrollbar for Chrome, Safari, Firefox and Edge */
+.scrollbar-none, .no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+.scrollbar-none::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari and Opera */
+}
+
+/* Safe area padding utilities for iOS bottom bar and notch */
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 1rem);
+}
+.pt-safe {
+  padding-top: max(env(safe-area-inset-top, 0px), 0.5rem);
 }
 
 /* Keyframe Animations */

@@ -3,15 +3,27 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Check, X, Search, Sparkles, AlertCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Check, X, Search, Sparkles, AlertCircle, LogOut } from "lucide-react";
 import { MENU_ITEMS, CATEGORIES } from "@/lib/data/menu";
 import { orderStore } from "@/lib/store/orderStore";
 import { formatPKR } from "@/lib/utils";
 
 export default function AdminMenuPage() {
+  const router = useRouter();
   const [stockMap, setStockMap] = useState<Record<string, boolean>>({});
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/admin/logout", { method: "POST" });
+      router.push("/admin/login");
+      router.refresh();
+    } catch {
+      router.push("/admin/login");
+    }
+  };
 
   useEffect(() => {
     const unsub = orderStore.subscribeStock((map) => {
@@ -48,16 +60,27 @@ export default function AdminMenuPage() {
           </p>
         </div>
 
-        {/* Search */}
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search item to toggle..."
-            className="w-full rounded-xl border border-slate-800 bg-[#121926] py-2 pl-10 pr-4 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
-          />
+        {/* Actions: Search & Logout */}
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search item to toggle..."
+              className="w-full rounded-xl border border-slate-800 bg-[#121926] py-2 pl-10 pr-4 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
+            />
+          </div>
+
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 rounded-xl border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-900/40 hover:text-red-200 transition-all cursor-pointer shrink-0"
+            title="Sign out of POS"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Sign Out</span>
+          </button>
         </div>
       </div>
 
@@ -110,7 +133,15 @@ export default function AdminMenuPage() {
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
                         <div className="relative h-10 w-10 shrink-0 rounded-xl overflow-hidden bg-slate-900 border border-slate-700">
-                          <Image src={item.image} alt={item.name} fill className="object-cover" />
+                          <Image 
+                            src={item.image} 
+                            alt={item.name} 
+                            fill 
+                            onError={(e) => {
+                              (e.target as any).src = "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=80";
+                            }}
+                            className="object-cover" 
+                          />
                         </div>
                         <div>
                           <div className="font-bold text-white text-sm">{item.name}</div>

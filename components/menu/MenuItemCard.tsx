@@ -33,7 +33,7 @@ export default function MenuItemCard({ item, isAvailable, onCustomize }: Props) 
         : "border-slate-800/50 bg-slate-900/40 opacity-60"
     }`}>
       {/* Top Image & Badges */}
-      <div className="relative h-48 w-full overflow-hidden bg-slate-950">
+      <div className="relative h-44 sm:h-48 w-full overflow-hidden bg-slate-950 shrink-0">
         <Image
           src={imgSrc}
           alt={item.name}
@@ -71,7 +71,7 @@ export default function MenuItemCard({ item, isAvailable, onCustomize }: Props) 
       </div>
 
       {/* Content Details */}
-      <div className="flex flex-1 flex-col justify-between p-4 sm:p-5">
+      <div className="flex flex-1 flex-col justify-between p-3.5 sm:p-5">
         <div>
           <div className="flex items-start justify-between gap-2">
             <h4 className="font-extrabold text-sm sm:text-base text-white group-hover:text-amber-400 transition-colors line-clamp-1">
@@ -89,7 +89,7 @@ export default function MenuItemCard({ item, isAvailable, onCustomize }: Props) 
             <span className="text-[10px] uppercase font-semibold text-slate-400">
               {item.variants && item.variants.length > 0 ? "Starts from" : "Price"}
             </span>
-            <div className="font-mono text-base font-black text-amber-400">
+            <div className="font-mono text-sm sm:text-base font-black text-amber-400">
               {formatPKR(minPrice)}
             </div>
           </div>
@@ -98,7 +98,7 @@ export default function MenuItemCard({ item, isAvailable, onCustomize }: Props) 
             type="button"
             disabled={!isAvailable}
             onClick={handleClick}
-            className={`flex items-center gap-1.5 rounded-2xl px-3.5 py-2 text-xs font-black transition-all cursor-pointer ${
+            className={`flex items-center justify-center gap-1.5 rounded-2xl px-3 sm:px-3.5 py-2 text-xs font-black transition-all cursor-pointer min-h-[38px] ${
               clicked ? "scale-90" : "hover:scale-105 active:scale-95"
             } ${
               isAvailable

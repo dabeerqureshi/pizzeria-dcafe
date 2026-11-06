@@ -44,28 +44,61 @@ Respond ONLY with valid JSON in this exact structure:
   "notes": string
 }`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { text: prompt },
-              {
-                inlineData: {
-                  data: base64Data,
-                  mimeType: mimeType,
+      let response;
+      try {
+        response = await ai.models.generateContent({
+          model: "gemini-2.0-flash",
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { text: prompt },
+                {
+                  inlineData: {
+                    data: base64Data,
+                    mimeType: mimeType,
+                  },
                 },
-              },
-            ],
+              ],
+            },
+          ],
+          config: {
+            responseMimeType: "application/json",
           },
-        ],
-        config: {
-          responseMimeType: "application/json",
-        },
-      });
+        });
+      } catch (geminiErr) {
+        // Fallback to gemini-1.5-flash if gemini-2.0-flash is unavailable
+        response = await ai.models.generateContent({
+          model: "gemini-1.5-flash",
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { text: prompt },
+                {
+                  inlineData: {
+                    data: base64Data,
+                    mimeType: mimeType,
+                  },
+                },
+              ],
+            },
+          ],
+          config: {
+            responseMimeType: "application/json",
+          },
+        });
+      }
 
-      const parsed = JSON.parse(response.text || "{}");
+      let rawText = typeof response.text === "function" ? (response as any).text() : response.text || "";
+      rawText = rawText.trim().replace(/^```json\s*/i, "").replace(/^```\s*/, "").replace(/\s*```$/, "");
+      const firstBrace = rawText.indexOf("{");
+      const lastBrace = rawText.lastIndexOf("}");
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        rawText = rawText.substring(firstBrace, lastBrace + 1);
+      }
+
+      const parsed = JSON.parse(rawText || "{}");
       return NextResponse.json(parsed);
     }
 

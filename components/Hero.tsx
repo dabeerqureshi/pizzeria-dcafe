@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { ArrowDown, Sparkles, Flame, ShieldCheck, Clock, Award, Star, Pizza, Clock8 } from "lucide-react";
-import { getKitchenStatus, KitchenStatus } from "@/lib/businessHours";
+import { getKitchenStatus, setKitchenOverride, KitchenStatus } from "@/lib/businessHours";
 
 export default function Hero() {
   const [kitchenStatus, setKitchenStatus] = useState<KitchenStatus>(getKitchenStatus());
@@ -46,11 +46,23 @@ export default function Hero() {
             </p>
 
             {!kitchenStatus.isOpen && (
-              <div className="rounded-2xl border border-red-500/40 bg-red-950/40 p-3.5 text-xs text-red-200 flex items-center gap-2.5 shadow-lg animate-pulse">
-                <Clock8 className="h-4 w-4 text-red-400 shrink-0" />
-                <span>
-                  <strong>Kitchen Currently Closed:</strong> No orders accepted after 12:00. Call <strong>0308-4382003</strong> for advance bookings.
-                </span>
+              <div className="rounded-2xl border border-red-500/40 bg-red-950/40 p-3.5 text-xs text-red-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shadow-lg animate-pulse">
+                <div className="flex items-center gap-2.5">
+                  <Clock8 className="h-4 w-4 text-red-400 shrink-0" />
+                  <span>
+                    <strong>Kitchen Currently Closed:</strong> No orders accepted after 12:00. Call <strong>0308-4382003</strong> for advance bookings.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setKitchenOverride("forced_open");
+                    setKitchenStatus(getKitchenStatus());
+                  }}
+                  className="rounded-xl bg-amber-500/20 px-2.5 py-1 text-[11px] font-bold text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-black transition-colors shrink-0"
+                >
+                  ⚡ Test Mode: Open Kitchen
+                </button>
               </div>
             )}
 
@@ -103,18 +115,18 @@ export default function Hero() {
           {/* Right Column: Animated Pizza Showcase with Floating Badges */}
           <div className="lg:col-span-5 relative">
             {/* Floating Mini Badge 1: Top Right */}
-            <div className="absolute -top-4 -right-2 sm:-right-4 z-20 rounded-2xl border border-amber-500/40 bg-[#141d2e]/95 p-3 backdrop-blur-md shadow-2xl animate-float">
+            <div className="absolute -top-3 right-2 sm:-right-4 z-20 rounded-2xl border border-amber-500/40 bg-[#141d2e]/95 p-2 sm:p-3 backdrop-blur-md shadow-2xl animate-float">
               <div className="flex items-center gap-2">
-                <span className="text-xl">👑</span>
+                <span className="text-base sm:text-xl">👑</span>
                 <div>
-                  <div className="text-[10px] font-bold text-amber-400 uppercase">Chef's Signature</div>
-                  <div className="text-xs font-black text-white">Crown Shape My Crust</div>
+                  <div className="text-[9px] sm:text-[10px] font-bold text-amber-400 uppercase">Chef's Signature</div>
+                  <div className="text-[11px] sm:text-xs font-black text-white">Crown Shape My Crust</div>
                 </div>
               </div>
             </div>
 
-            {/* Floating Mini Badge 2: Bottom Left */}
-            <div className="absolute -bottom-5 -left-2 sm:-left-4 z-20 rounded-2xl border border-red-500/40 bg-[#141d2e]/95 p-3 backdrop-blur-md shadow-2xl animate-float-reverse">
+            {/* Floating Mini Badge 2: Bottom Left (Hidden on mobile to prevent overlapping bottom price banner) */}
+            <div className="hidden sm:flex absolute -bottom-4 -left-4 z-20 rounded-2xl border border-red-500/40 bg-[#141d2e]/95 p-3 backdrop-blur-md shadow-2xl animate-float-reverse">
               <div className="flex items-center gap-2">
                 <Flame className="h-5 w-5 text-red-500 animate-flame" />
                 <div>
@@ -136,19 +148,19 @@ export default function Hero() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
               
               {/* Bottom Info Banner */}
-              <div className="absolute bottom-4 left-4 right-4 rounded-2xl border border-slate-700/80 bg-black/80 p-4 backdrop-blur-md transition-all group-hover:border-amber-500/50">
-                <div className="flex items-center justify-between">
-                  <div>
+              <div className="absolute bottom-2.5 left-2.5 right-2.5 sm:bottom-4 sm:left-4 sm:right-4 rounded-2xl border border-slate-700/80 bg-black/85 p-3 sm:p-4 backdrop-blur-md transition-all group-hover:border-amber-500/50">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
                       House Specials
                     </span>
-                    <h3 className="font-extrabold text-white text-base">My Crust & Chicago Dynamite</h3>
+                    <h3 className="font-extrabold text-white text-xs sm:text-base truncate">My Crust & Chicago Dynamite</h3>
                   </div>
-                  <span className="font-mono text-sm font-black text-amber-400">
+                  <span className="font-mono text-xs sm:text-sm font-black text-amber-400 shrink-0">
                     Rs. 1,299 / 1,799
                   </span>
                 </div>
-                <p className="mt-1 text-[11px] text-slate-300">
+                <p className="mt-1 text-[10px] sm:text-[11px] text-slate-300 line-clamp-1 sm:line-clamp-2">
                   Two types of chicken, crown crust, fries in middle & melted mozzarella.
                 </p>
               </div>

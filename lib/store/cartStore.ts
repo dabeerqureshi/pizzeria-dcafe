@@ -16,6 +16,15 @@ class CartStore {
         if (saved) {
           this.items = JSON.parse(saved);
         }
+
+        window.addEventListener("storage", (e) => {
+          if (e.key === CART_STORAGE_KEY) {
+            try {
+              this.items = e.newValue ? JSON.parse(e.newValue) : [];
+              this.listeners.forEach(cb => cb([...this.items]));
+            } catch {}
+          }
+        });
       } catch {}
     }
   }

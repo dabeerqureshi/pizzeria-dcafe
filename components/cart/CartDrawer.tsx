@@ -7,7 +7,7 @@ import { cartStore } from "@/lib/store/cartStore";
 import { CartItem } from "@/lib/types";
 import { formatPKR } from "@/lib/utils";
 import { MINIMUM_ORDER_AMOUNT, FREE_DELIVERY_THRESHOLD } from "@/lib/pricing";
-import { getKitchenStatus, KitchenStatus } from "@/lib/businessHours";
+import { getKitchenStatus, setKitchenOverride, KitchenStatus } from "@/lib/businessHours";
 
 export default function CartDrawer() {
   const [isOpen, setIsOpen] = useState(false);
@@ -38,7 +38,10 @@ export default function CartDrawer() {
   const freeDeliveryProgress = Math.min(100, Math.round((totals.subtotal / FREE_DELIVERY_THRESHOLD) * 100));
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+    <div 
+      onClick={() => cartStore.setDrawerOpen(false)}
+      className="fixed inset-0 z-50 flex justify-end bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
+    >
       <div 
         className="relative flex h-full w-full max-w-md flex-col bg-[#0f1724] border-l border-slate-800 shadow-2xl animate-in slide-in-from-right duration-300"
         onClick={(e) => e.stopPropagation()}
@@ -206,7 +209,7 @@ export default function CartDrawer() {
 
         {/* Footer Summary & Checkout */}
         {items.length > 0 && (
-          <div className="border-t border-slate-800 bg-[#121a29] p-5 space-y-3">
+          <div className="border-t border-slate-800 bg-[#121a29] p-4 sm:p-5 pb-8 sm:pb-5 space-y-3 shrink-0">
             <div className="space-y-1.5 text-xs">
               <div className="flex justify-between text-slate-400">
                 <span>Subtotal</span>
@@ -236,9 +239,19 @@ export default function CartDrawer() {
                 >
                   <span>Kitchen Closed (No Orders After 12:00)</span>
                 </button>
-                <p className="text-[10px] text-center text-slate-400">
-                  Opening daily. For advance bookings, WhatsApp 0308-4382003.
-                </p>
+                <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>Advance bookings on WhatsApp.</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setKitchenOverride("forced_open");
+                      setKitchenStatus(getKitchenStatus());
+                    }}
+                    className="text-amber-400 hover:underline font-bold"
+                  >
+                    Force Open for Testing
+                  </button>
+                </div>
               </div>
             ) : totals.isEligibleForDelivery ? (
               <Link
