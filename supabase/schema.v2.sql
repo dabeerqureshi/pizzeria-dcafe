@@ -274,19 +274,21 @@ values (
   true
 ) on conflict (slug) do nothing;
 
-insert into public.delivery_zones (branch_id, zone_name, min_order_amount, free_delivery_threshold, delivery_fee, max_radius_km)
+insert into public.delivery_zones (id, branch_id, zone_name, min_order_amount, free_delivery_threshold, delivery_fee, max_radius_km)
 values
-  ('a0000000-0000-0000-0000-000000000001', 'Core Delivery Zone (0-5km)', 1000.00, 1500.00, 100.00, 5.00),
-  ('a0000000-0000-0000-0000-000000000001', 'Extended Delivery Zone (5-10km)', 1200.00, 2000.00, 150.00, 10.00)
-on conflict do nothing;
+  ('d0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'Core Delivery Zone (0-5km)', 1000.00, 1500.00, 100.00, 5.00),
+  ('d0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001', 'Extended Delivery Zone (5-10km)', 1200.00, 2000.00, 150.00, 10.00)
+on conflict (id) do nothing;
 
--- Demo Riders
+-- Demo Riders (using valid hex UUIDs)
 insert into public.riders (id, branch_id, rider_name, phone, vehicle_number, current_status)
 values
-  ('r0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'Ali Hassan (Rider 1)', '0300-1122334', 'LEA-4521', 'available'),
-  ('r0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001', 'Usman Tariq (Rider 2)', '0321-9988776', 'LEN-8812', 'available')
-on conflict do nothing;
+  ('b0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'Ali Hassan (Rider 1)', '0300-1122334', 'LEA-4521', 'available'),
+  ('b0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001', 'Usman Tariq (Rider 2)', '0321-9988776', 'LEN-8812', 'available')
+on conflict (id) do nothing;
 
--- 10. REALTIME PUBLICATION
-alter publication supabase_realtime add table public.orders;
+-- 10. REALTIME PUBLICATION (idempotent)
+do $$ begin
+  alter publication supabase_realtime add table public.orders;
+exception when duplicate_object then null; end $$;
 
