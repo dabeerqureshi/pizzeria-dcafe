@@ -14,6 +14,7 @@ interface Props {
 
 export default function MenuItemCard({ item, isAvailable, onCustomize }: Props) {
   const [clicked, setClicked] = useState(false);
+  const [imgSrc, setImgSrc] = useState(item.image);
 
   const minPrice = item.variants && item.variants.length > 0
     ? Math.min(...item.variants.map(v => v.price))
@@ -34,9 +35,10 @@ export default function MenuItemCard({ item, isAvailable, onCustomize }: Props) 
       {/* Top Image & Badges */}
       <div className="relative h-48 w-full overflow-hidden bg-slate-950">
         <Image
-          src={item.image}
+          src={imgSrc}
           alt={item.name}
           fill
+          onError={() => setImgSrc("https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=80")}
           className={`object-cover transition-transform duration-700 ease-out group-hover:scale-110 ${
             !isAvailable ? "grayscale" : ""
           }`}

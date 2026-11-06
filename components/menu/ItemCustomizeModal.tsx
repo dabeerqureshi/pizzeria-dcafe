@@ -92,6 +92,9 @@ export default function ItemCustomizeModal({ item, onClose }: Props) {
             src={item.image}
             alt={item.name}
             fill
+            onError={(e) => {
+              (e.target as any).src = "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=80";
+            }}
             className="object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#121926] via-[#121926]/40 to-transparent" />
