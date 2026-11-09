@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node test/run-all-tests.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.32.0",

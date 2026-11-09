@@ -46,23 +46,21 @@ export default function Hero() {
             </p>
 
             {!kitchenStatus.isOpen && (
-              <div className="rounded-2xl border border-red-500/40 bg-red-950/40 p-3.5 text-xs text-red-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shadow-lg animate-pulse">
+              <div className="rounded-2xl border border-red-500/40 bg-red-950/40 p-3.5 text-xs text-red-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shadow-lg">
                 <div className="flex items-center gap-2.5">
                   <Clock8 className="h-4 w-4 text-red-400 shrink-0" />
                   <span>
-                    <strong>Kitchen Currently Closed:</strong> No orders accepted after 12:00. Call <strong>0308-4382003</strong> for advance bookings.
+                    <strong>Kitchen Closed for the Night:</strong> Cutoff is 12:00. Kitchen reopens daily at 12:00 PM.
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setKitchenOverride("forced_open");
-                    setKitchenStatus(getKitchenStatus());
-                  }}
-                  className="rounded-xl bg-amber-500/20 px-2.5 py-1 text-[11px] font-bold text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-black transition-colors shrink-0"
+                <a
+                  href="https://wa.me/923084382003?text=Hi%20Pizzeria%20D%20Cafe%2C%20I%20would%20like%20to%20place%20an%20advance%20order."
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-xl bg-emerald-500/20 px-3 py-1.5 text-[11px] font-bold text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500 hover:text-black transition-colors shrink-0"
                 >
-                  ⚡ Test Mode: Open Kitchen
-                </button>
+                  WhatsApp Advance Booking
+                </a>
               </div>
             )}
 

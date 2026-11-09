@@ -29,8 +29,6 @@ export async function POST(req: NextRequest) {
       success: true,
       message: `Verification code sent to ${phone} via SMS/WhatsApp.`,
       expiresAt,
-      // Dev hint for easy verification in development/testing
-      devHintCode: process.env.NODE_ENV !== "production" ? code : undefined,
     });
   } catch (err: any) {
     return NextResponse.json(

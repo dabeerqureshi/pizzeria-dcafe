@@ -34,16 +34,6 @@ export default function DChefBot() {
   const [hasCartItems, setHasCartItems] = useState(false);
   const [addedItemIds, setAddedItemIds] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
-    const unsub = cartStore.subscribe((items) => {
-      setHasCartItems(items.length > 0);
-    });
-    return unsub;
-  }, []);
-
-  if (pathname.startsWith("/admin") || pathname.startsWith("/kitchen") || pathname.startsWith("/rider")) {
-    return null;
-  }
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "msg-welcome",
@@ -59,10 +49,22 @@ export default function DChefBot() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const unsub = cartStore.subscribe((items) => {
+      setHasCartItems(items.length > 0);
+    });
+    return unsub;
+  }, []);
+
+  useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, isOpen]);
+
+  // All React Hooks have executed; safe conditional route exclusions:
+  if (pathname.startsWith("/admin") || pathname.startsWith("/kitchen") || pathname.startsWith("/rider")) {
+    return null;
+  }
 
   const handleSend = async (messageText?: string) => {
     const textToSend = messageText || input;

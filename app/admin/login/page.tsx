@@ -43,12 +43,6 @@ function LoginForm() {
     }
   };
 
-  const handleFillDemo = () => {
-    setUsername("admin");
-    setPassword("pizzeria123");
-    setError(null);
-  };
-
   return (
     <div className="relative w-full max-w-md rounded-3xl border border-slate-800 bg-[#121927]/95 p-6 sm:p-8 shadow-2xl backdrop-blur-md">
       {/* Brand Header */}
@@ -137,26 +131,14 @@ function LoginForm() {
         </button>
       </form>
 
-      {/* Quick Fill Demo Helper Button */}
-      <div className="mt-5 pt-4 border-t border-slate-800 text-center space-y-3">
-        <button
-          type="button"
-          onClick={handleFillDemo}
-          className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-400/90 hover:text-amber-300 hover:underline cursor-pointer"
+      <div className="mt-5 pt-4 border-t border-slate-800 text-center">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-amber-400 transition-colors"
         >
-          <Sparkles className="h-3.5 w-3.5" />
-          <span>Fill Default Credentials (admin / pizzeria123)</span>
-        </button>
-
-        <div>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            <span>Return to Customer Menu</span>
-          </Link>
-        </div>
+          <ArrowLeft className="h-3.5 w-3.5" />
+          <span>Return to Customer Menu</span>
+        </Link>
       </div>
     </div>
   );

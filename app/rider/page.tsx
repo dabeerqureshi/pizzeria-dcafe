@@ -6,7 +6,7 @@ import {
   Bike, Phone, MapPin, CheckCircle2, AlertTriangle, DollarSign, 
   Clock, ShieldCheck, ChevronRight, Navigation, Sparkles, ChefHat
 } from "lucide-react";
-import { orderStore, DEMO_RIDERS } from "@/lib/store/orderStore";
+import { orderStore, FLEET_RIDERS } from "@/lib/store/orderStore";
 import { Order } from "@/lib/types";
 import { formatPKR } from "@/lib/utils";
 
@@ -22,7 +22,7 @@ export default function RiderDispatchPage() {
     return unsub;
   }, []);
 
-  const activeRider = DEMO_RIDERS.find((r) => r.id === selectedRiderId) || DEMO_RIDERS[0];
+  const activeRider = FLEET_RIDERS.find((r) => r.id === selectedRiderId) || FLEET_RIDERS[0];
 
   // Rider's active deliveries (either assigned directly or ready for dispatch)
   const riderOrders = orders.filter(
@@ -86,7 +86,7 @@ export default function RiderDispatchPage() {
             onChange={(e) => setSelectedRiderId(e.target.value)}
             className="rounded-xl border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs font-bold text-amber-400 focus:outline-none"
           >
-            {DEMO_RIDERS.map((r) => (
+            {FLEET_RIDERS.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.riderName} ({r.vehicleNumber})
               </option>
@@ -163,9 +163,13 @@ export default function RiderDispatchPage() {
                         <div className="flex items-center gap-2">
                           <span className="text-base font-black text-white">#{ord.orderNumber}</span>
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${
-                            isOut ? "bg-sky-500 text-slate-950" : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                            isOut
+                              ? "bg-sky-500 text-slate-950"
+                              : ord.orderStatus === "preparing"
+                              ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                              : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 animate-pulse"
                           }`}>
-                            {isOut ? "🚴 En Route" : "Waiting for Pickup"}
+                            {isOut ? "🚴 En Route" : ord.orderStatus === "preparing" ? "👨‍🍳 Baking in Oven" : "📦 Ready at Counter"}
                           </span>
                         </div>
                         <p className="text-xs font-bold text-slate-200 mt-0.5">{ord.customerName}</p>
@@ -230,13 +234,20 @@ export default function RiderDispatchPage() {
 
                     {/* Actions */}
                     {!isOut ? (
-                      <button
-                        onClick={() => handleStartDelivery(ord.id)}
-                        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-slate-950 font-black text-xs shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        <Bike className="h-4 w-4" />
-                        Start Delivery / Picked Up from Kitchen
-                      </button>
+                      ord.orderStatus === "preparing" ? (
+                        <div className="w-full py-2.5 px-3 rounded-xl bg-slate-800/80 border border-slate-700/80 text-amber-300 font-bold text-xs flex items-center justify-center gap-2">
+                          <ChefHat className="h-4 w-4 animate-bounce text-amber-400" />
+                          <span>In Oven (Baking) — Waiting for Packaging</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleStartDelivery(ord.id)}
+                          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-slate-950 font-black text-xs shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <Bike className="h-4 w-4" />
+                          Start Delivery / Picked Up from Kitchen
+                        </button>
+                      )
                     ) : (
                       <button
                         onClick={() => handleCompleteDelivery(ord.id, ord.totalAmount, isCod)}

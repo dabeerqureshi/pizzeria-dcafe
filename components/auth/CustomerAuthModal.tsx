@@ -181,8 +181,9 @@ export default function CustomerAuthModal() {
                   className="w-full rounded-xl border border-slate-700 bg-slate-900/90 pl-20 pr-4 py-3 font-mono text-sm font-bold text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
                 />
               </div>
-              <p className="text-[10px] text-slate-500 mt-1">
-                Tip: Demo accounts: <code>0300-1234567</code> (PIN: 1234) or <code>0308-4382003</code> (PIN: 4321)
+              <p className="text-[10px] text-slate-400 mt-1.5 flex items-center gap-1.5">
+                <ShieldCheck className="h-3 w-3 text-emerald-400 shrink-0" />
+                <span>Fast 1-step checkout • Quick delivery address auto-fill</span>
               </p>
             </div>
 

@@ -6,18 +6,18 @@ const ORDERS_STORAGE_KEY = "pizzeria_dcafe_orders_v2";
 const MENU_STOCK_STORAGE_KEY = "pizzeria_dcafe_stock_v2";
 const SETTLEMENTS_STORAGE_KEY = "pizzeria_dcafe_settlements_v2";
 
-export const DEMO_RIDERS: Rider[] = [
+export const FLEET_RIDERS: Rider[] = [
   {
     id: "r1",
-    riderName: "Ali Hassan (Rider 1)",
+    riderName: "Ali Hassan",
     phone: "0300-1122334",
     vehicleNumber: "LEA-4521",
     currentStatus: "available",
-    activeOrdersCount: 1,
+    activeOrdersCount: 0,
   },
   {
     id: "r2",
-    riderName: "Usman Tariq (Rider 2)",
+    riderName: "Usman Tariq",
     phone: "0321-9988776",
     vehicleNumber: "LEN-8812",
     currentStatus: "available",
@@ -25,149 +25,8 @@ export const DEMO_RIDERS: Rider[] = [
   },
 ];
 
-const INITIAL_DEMO_ORDERS: Order[] = [
-  {
-    id: "ord-1001",
-    orderNumber: 101,
-    idempotencyKey: "seed-idem-1001",
-    customerName: "Hamza Tariq",
-    customerPhone: "0321-4455889",
-    fulfillmentType: "delivery",
-    deliveryAddress: "House 42-B, Sector C, Bahria Town",
-    landmark: "Near Talha Mosque",
-    subtotal: 2699,
-    deliveryFee: 0,
-    totalAmount: 2699,
-    paymentMethod: "online_transfer",
-    paymentStatus: "verified",
-    paymentReceiptUrl: "https://images.unsplash.com/photo-1556742049-0a67c5574f73?w=800&auto=format&fit=crop&q=80",
-    verifiedTransactionId: "EP-98234710",
-    verificationDetails: {
-      matched: true,
-      amount: 2699,
-      tid: "EP-98234710",
-      bankName: "Easypaisa",
-      confidence: "HIGH",
-      timestamp: "Today at 01:25 AM",
-      notes: "Amount matches order total exactly. Verified via Gemini Vision."
-    },
-    orderStatus: "preparing",
-    notes: "Make it extra crispy with plenty of garlic dip.",
-    items: [
-      {
-        id: "item-1",
-        menuItemId: "ec-meltzilla-monster",
-        itemName: "Meltzilla Monster",
-        sizeName: "10\" Triple Layer",
-        unitPrice: 2699,
-        quantity: 1,
-        addons: [{ id: "ad-ch", name: "Extra Cheese", price: 250 }],
-        specialInstructions: "Sauce on the side please"
-      }
-    ],
-    createdAt: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
-  },
-  {
-    id: "ord-1002",
-    orderNumber: 102,
-    idempotencyKey: "seed-idem-1002",
-    customerName: "Ayesha Malik",
-    customerPhone: "0300-8812345",
-    fulfillmentType: "delivery",
-    deliveryAddress: "Flat 4, Gulberg III, Main Boulevard",
-    landmark: "Behind Xinhua Mall",
-    subtotal: 1948,
-    deliveryFee: 0,
-    totalAmount: 1948,
-    paymentMethod: "cod",
-    paymentStatus: "unpaid",
-    orderStatus: "confirmed",
-    notes: "Please bring change for Rs. 5,000 note.",
-    items: [
-      {
-        id: "item-2",
-        menuItemId: "bg-mighty-zinger-combo",
-        itemName: "Mighty Zinger Combo",
-        unitPrice: 950,
-        quantity: 1,
-        specialInstructions: "Extra spicy mayo"
-      },
-      {
-        id: "item-3",
-        menuItemId: "wp-dynamite",
-        itemName: "Dynamite Wrap",
-        unitPrice: 649,
-        quantity: 1
-      },
-      {
-        id: "item-4",
-        menuItemId: "fr-pizza-fries",
-        itemName: "Pizza Fries",
-        unitPrice: 799,
-        quantity: 1
-      }
-    ],
-    createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-  },
-  {
-    id: "ord-1003",
-    orderNumber: 103,
-    idempotencyKey: "seed-idem-1003",
-    customerName: "Zainab Raza",
-    customerPhone: "0345-1234567",
-    fulfillmentType: "pickup",
-    pickupCode: "P-4821",
-    scheduledFor: "In 25 mins",
-    subtotal: 1850,
-    deliveryFee: 0,
-    totalAmount: 1850,
-    paymentMethod: "cod",
-    paymentStatus: "unpaid",
-    orderStatus: "ready_for_dispatch",
-    notes: "Counter pickup. Customer paying cash at counter.",
-    items: [
-      {
-        id: "item-5",
-        menuItemId: "hs-d-special",
-        itemName: "D Special Signature Pizza",
-        sizeName: "Large (13\")",
-        unitPrice: 1850,
-        quantity: 1,
-      }
-    ],
-    createdAt: new Date(Date.now() - 1000 * 60 * 22).toISOString(),
-  },
-  {
-    id: "ord-1004",
-    orderNumber: 104,
-    idempotencyKey: "seed-idem-1004",
-    customerName: "Bilal Sheikh",
-    customerPhone: "0333-5128990",
-    fulfillmentType: "delivery",
-    deliveryAddress: "Street 7, Phase 5 DHA",
-    landmark: "Corner House next to Jalal Sons",
-    subtotal: 1799,
-    deliveryFee: 0,
-    totalAmount: 1799,
-    paymentMethod: "cod",
-    paymentStatus: "unpaid",
-    orderStatus: "out_for_delivery",
-    riderId: "r1",
-    assignedRiderName: "Ali Hassan (Rider 1)",
-    notes: "Gate bell is broken, please call on arrival.",
-    items: [
-      {
-        id: "item-6",
-        menuItemId: "ss-chicago-dynamite",
-        itemName: "Chicago Dynamite Stuffed",
-        sizeName: "Medium (10\")",
-        unitPrice: 1799,
-        quantity: 1
-      }
-    ],
-    createdAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
-  }
-];
+// Initial live queue starts empty for production delivery
+const INITIAL_ORDERS: Order[] = [];
 
 class OrderStore {
   private listeners: Set<(orders: Order[]) => void> = new Set();
@@ -361,8 +220,8 @@ class OrderStore {
     this.broadcast({ type: "ORDER_UPDATE" });
   }
 
-  public resetDemoOrders(): void {
-    this.saveOrders(INITIAL_DEMO_ORDERS);
+  public clearAllOrders(): void {
+    this.saveOrders([]);
     this.broadcast({ type: "ORDER_UPDATE" });
   }
 
@@ -431,16 +290,16 @@ class OrderStore {
 
   // --- Private Helpers ---
   private getLocalOrders(): Order[] {
-    if (typeof window === "undefined") return INITIAL_DEMO_ORDERS;
+    if (typeof window === "undefined") return [];
     try {
       const stored = localStorage.getItem(ORDERS_STORAGE_KEY);
       if (!stored) {
-        localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(INITIAL_DEMO_ORDERS));
-        return INITIAL_DEMO_ORDERS;
+        localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify([]));
+        return [];
       }
       return JSON.parse(stored);
     } catch {
-      return INITIAL_DEMO_ORDERS;
+      return [];
     }
   }
 

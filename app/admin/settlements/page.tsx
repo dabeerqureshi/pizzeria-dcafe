@@ -6,7 +6,7 @@ import {
   DollarSign, Bike, ShieldCheck, AlertCircle, ArrowLeft, 
   CheckCircle2, Clock, Calendar, FileText, ChevronRight, UserCheck
 } from "lucide-react";
-import { orderStore, DEMO_RIDERS } from "@/lib/store/orderStore";
+import { orderStore, FLEET_RIDERS } from "@/lib/store/orderStore";
 import { Order, CodSettlement } from "@/lib/types";
 import { formatPKR } from "@/lib/utils";
 
@@ -26,7 +26,7 @@ export default function CodSettlementPage() {
     return unsub;
   }, []);
 
-  const activeRider = DEMO_RIDERS.find((r) => r.id === selectedRiderId) || DEMO_RIDERS[0];
+  const activeRider = FLEET_RIDERS.find((r) => r.id === selectedRiderId) || FLEET_RIDERS[0];
 
   // Orders delivered today by this rider
   const riderDeliveredOrders = orders.filter(
@@ -135,7 +135,7 @@ export default function CodSettlementPage() {
 
               {/* Rider Select Pills */}
               <div className="grid grid-cols-2 gap-3 mb-5">
-                {DEMO_RIDERS.map((r) => {
+                {FLEET_RIDERS.map((r) => {
                   const isSelected = r.id === selectedRiderId;
                   return (
                     <button

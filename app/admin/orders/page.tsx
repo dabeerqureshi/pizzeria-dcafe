@@ -22,6 +22,7 @@ export default function AdminOrdersPage() {
   const [activeReceiptModalOrder, setActiveReceiptModalOrder] = useState<Order | null>(null);
   const [printingOrder, setPrintingOrder] = useState<Order | null>(null);
   const [searchFilter, setSearchFilter] = useState("");
+  const [showCancelledModal, setShowCancelledModal] = useState(false);
   const [kitchenStatus, setKitchenStatus] = useState<KitchenStatus>(getKitchenStatus());
   const prevOrdersCountRef = useRef(0);
 
@@ -119,11 +120,24 @@ export default function AdminOrdersPage() {
     );
   });
 
-  const pendingOrders = filteredOrders.filter(o => o.orderStatus === "pending");
-  const acceptedOrders = filteredOrders.filter(o => o.orderStatus === "accepted" || o.orderStatus === "confirmed");
-  const preparingOrders = filteredOrders.filter(o => o.orderStatus === "preparing");
-  const deliveringOrders = filteredOrders.filter(o => o.orderStatus === "delivering" || o.orderStatus === "out_for_delivery");
-  const deliveredOrders = filteredOrders.filter(o => o.orderStatus === "delivered");
+  const pendingOrders = filteredOrders.filter(
+    (o) => o.orderStatus === "pending" || o.orderStatus === "pending_confirmation" || o.orderStatus === "pending_payment"
+  );
+  const acceptedOrders = filteredOrders.filter(
+    (o) => o.orderStatus === "accepted" || o.orderStatus === "confirmed"
+  );
+  const preparingOrders = filteredOrders.filter(
+    (o) => o.orderStatus === "preparing"
+  );
+  const deliveringOrders = filteredOrders.filter(
+    (o) => o.orderStatus === "delivering" || o.orderStatus === "out_for_delivery" || o.orderStatus === "ready_for_dispatch"
+  );
+  const deliveredOrders = filteredOrders.filter(
+    (o) => o.orderStatus === "delivered" || o.orderStatus === "picked_up"
+  );
+  const cancelledOrders = filteredOrders.filter(
+    (o) => o.orderStatus === "cancelled" || o.orderStatus === "failed_delivery"
+  );
 
   const totalSales = orders
     .filter(o => o.orderStatus !== "cancelled")
@@ -325,16 +339,29 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
-      {/* Filter / Search Bar */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-400" />
-        <input
-          type="text"
-          value={searchFilter}
-          onChange={(e) => setSearchFilter(e.target.value)}
-          placeholder="Filter by Order #, Customer, or Item..."
-          className="w-full rounded-xl border border-slate-800 bg-[#121926] py-2 pl-10 pr-4 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
-        />
+      {/* Filter / Search Bar & Cancelled Orders View */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="relative max-w-sm w-full">
+          <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-400" />
+          <input
+            type="text"
+            value={searchFilter}
+            onChange={(e) => setSearchFilter(e.target.value)}
+            placeholder="Filter by Order #, Customer, or Item..."
+            className="w-full rounded-xl border border-slate-800 bg-[#121926] py-2 pl-10 pr-4 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none"
+          />
+        </div>
+
+        {cancelledOrders.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowCancelledModal(true)}
+            className="flex items-center gap-1.5 rounded-xl border border-red-900/40 bg-red-950/20 px-3 py-2 text-xs font-bold text-red-300 hover:bg-red-900/30 hover:border-red-500/50 transition-all cursor-pointer self-start sm:self-auto"
+          >
+            <AlertCircle className="h-4 w-4 text-red-400" />
+            <span>Cancelled Orders ({cancelledOrders.length})</span>
+          </button>
+        )}
       </div>
 
       {/* 5-Column Full Status Kanban Board */}
@@ -380,9 +407,9 @@ export default function AdminOrdersPage() {
           primaryNextStatus="delivering"
         />
 
-        {/* Column 4: Delivering / Out */}
+        {/* Column 4: Ready for Dispatch / Delivering */}
         <KanbanColumn
-          title="4. Delivering"
+          title="4. Ready / Delivering"
           badgeColor="bg-sky-500/20 text-sky-400 border-sky-500/30"
           count={deliveringOrders.length}
           orders={deliveringOrders}
@@ -531,7 +558,77 @@ export default function AdminOrdersPage() {
         </div>
       )}
 
-      {/* Kitchen Slip Print Modal */}
+      {/* Cancelled Orders Modal */}
+      {showCancelledModal && (
+        <div 
+          onClick={() => setShowCancelledModal(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-xl max-h-[85vh] overflow-y-auto rounded-3xl border border-red-500/30 bg-[#121927] p-6 shadow-2xl space-y-4"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-red-400" />
+                <h3 className="font-extrabold text-white text-base">
+                  Cancelled / Rejected Orders ({cancelledOrders.length})
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowCancelledModal(false)}
+                className="rounded-full bg-slate-800 p-1.5 text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {cancelledOrders.map((ord) => (
+                <div key={ord.id} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 space-y-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="font-mono text-amber-400 font-bold">#{ord.orderNumber}</span>
+                      <h4 className="text-white text-sm font-bold">{ord.customerName}</h4>
+                      <p className="text-xs text-slate-400">{ord.customerPhone} • {formatPKR(ord.totalAmount)}</p>
+                    </div>
+                    <span className="rounded-full bg-red-500/20 text-red-300 border border-red-500/40 px-2 py-0.5 text-[10px] font-bold uppercase">
+                      Cancelled
+                    </span>
+                  </div>
+
+                  <div className="text-[11px] text-slate-400">
+                    Items: {ord.items.map(i => `${i.quantity}x ${i.itemName}`).join(", ")}
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800/80">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleStatusChange(ord.id, "pending");
+                        if (cancelledOrders.length <= 1) setShowCancelledModal(false);
+                      }}
+                      className="rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3 py-1.5 text-xs font-bold hover:bg-amber-500 hover:text-black transition-all cursor-pointer"
+                    >
+                      Restore to Pending
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleDeleteOrder(ord.id);
+                        if (cancelledOrders.length <= 1) setShowCancelledModal(false);
+                      }}
+                      className="rounded-xl bg-slate-800 text-slate-400 px-3 py-1.5 text-xs font-bold hover:bg-red-950/40 hover:text-red-300 transition-all cursor-pointer"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       {printingOrder && (
         <div 
           onClick={() => setPrintingOrder(null)}
@@ -708,49 +805,81 @@ function KanbanColumn({
                   Change Status Live:
                 </label>
                 <select
-                  value={ord.orderStatus === "out_for_delivery" ? "delivering" : ord.orderStatus === "confirmed" ? "accepted" : ord.orderStatus}
+                  value={
+                    ord.orderStatus === "delivering" ? "out_for_delivery" :
+                    ord.orderStatus === "confirmed" ? "accepted" :
+                    ord.orderStatus === "pending_confirmation" || ord.orderStatus === "pending_payment" ? "pending" :
+                    ord.orderStatus
+                  }
                   onChange={(e) => onStatusChange(ord.id, e.target.value as OrderStatus)}
                   className="w-full rounded-xl border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none"
                 >
                   <option value="pending">Pending (New)</option>
                   <option value="accepted">Accepted</option>
                   <option value="preparing">Preparing (In Kitchen)</option>
-                  <option value="delivering">Delivering (Out)</option>
+                  <option value="ready_for_dispatch">Ready for Counter / Dispatch</option>
+                  <option value="out_for_delivery">Out for Delivery (Rider)</option>
                   <option value="delivered">Delivered</option>
+                  <option value="picked_up">Picked Up (Counter)</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
 
               {/* Primary Next Action Button */}
-              {primaryActionLabel && primaryNextStatus && (
-                <div className="space-y-1.5 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => onStatusChange(ord.id, primaryNextStatus)}
-                    className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 py-2 text-xs font-black uppercase tracking-wider text-slate-950 shadow-md hover:bg-amber-400 hover:scale-[1.02] active:scale-98 transition-all cursor-pointer"
-                  >
-                    <span>{primaryActionLabel}</span>
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </button>
+              {(() => {
+                let actionLabel = primaryActionLabel;
+                let nextStatus = primaryNextStatus;
 
-                  {showRejectAction && (
+                if (primaryNextStatus === "delivering") {
+                  if (ord.fulfillmentType === "pickup") {
+                    actionLabel = "Ready for Pickup 🛍️";
+                    nextStatus = "ready_for_dispatch";
+                  } else {
+                    actionLabel = "Hand to Rider 🛵";
+                    nextStatus = "out_for_delivery";
+                  }
+                } else if (primaryNextStatus === "delivered") {
+                  if (ord.fulfillmentType === "pickup") {
+                    actionLabel = "Handed Over to Customer 🤝";
+                    nextStatus = "picked_up";
+                  } else {
+                    actionLabel = "Mark Delivered 🎉";
+                    nextStatus = "delivered";
+                  }
+                }
+
+                if (!actionLabel || !nextStatus) return null;
+
+                return (
+                  <div className="space-y-1.5 pt-1">
                     <button
                       type="button"
-                      onClick={() => onStatusChange(ord.id, "cancelled")}
-                      className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-800/80 py-1.5 text-[11px] font-bold text-red-400 hover:bg-red-950/40 hover:text-red-300 transition-colors cursor-pointer"
+                      onClick={() => onStatusChange(ord.id, nextStatus)}
+                      className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-amber-500 py-2 text-xs font-black uppercase tracking-wider text-slate-950 shadow-md hover:bg-amber-400 hover:scale-[1.02] active:scale-98 transition-all cursor-pointer"
                     >
-                      <X className="h-3.5 w-3.5" />
-                      <span>Reject Order</span>
+                      <span>{actionLabel}</span>
+                      <ArrowRight className="h-3.5 w-3.5" />
                     </button>
-                  )}
-                </div>
-              )}
+
+                    {showRejectAction && (
+                      <button
+                        type="button"
+                        onClick={() => onStatusChange(ord.id, "cancelled")}
+                        className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-800/80 py-1.5 text-[11px] font-bold text-red-400 hover:bg-red-950/40 hover:text-red-300 transition-colors cursor-pointer"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        <span>Reject Order</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
 
               {isCompletedColumn && (
                 <div className="flex items-center justify-between pt-1 border-t border-slate-800/60">
                   <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-400">
                     <CheckCircle2 className="h-4 w-4" />
-                    <span>Delivered</span>
+                    <span>{ord.fulfillmentType === "pickup" ? "Picked Up (Counter)" : "Delivered"}</span>
                   </div>
                   {onDelete && (
                     <button

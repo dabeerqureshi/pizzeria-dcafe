@@ -7,54 +7,8 @@ interface RegisteredUserRecord extends CustomerProfile {
   pin: string; // 4-digit PIN or password
 }
 
-// Initial demo customer so repeat login works immediately out of the box
-const INITIAL_DEMO_CUSTOMERS: RegisteredUserRecord[] = [
-  {
-    id: "cust-demo-1",
-    phone: "0300-1234567",
-    fullName: "Hamza Tariq",
-    email: "hamza@example.com",
-    pin: "1234",
-    addresses: [
-      {
-        id: "addr-1",
-        label: "Home",
-        addressLine: "House 42-B, Sector C, Bahria Town, Lahore",
-        landmark: "Near Talha Mosque",
-        isDefault: true,
-      },
-      {
-        id: "addr-2",
-        label: "Office",
-        addressLine: "Level 4, Arfa Software Technology Park, Ferozepur Road, Lahore",
-        landmark: "Near Metro Bus Station",
-        isDefault: false,
-      },
-    ],
-    defaultAddress: "House 42-B, Sector C, Bahria Town, Lahore",
-    defaultLandmark: "Near Talha Mosque",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "cust-demo-2",
-    phone: "0308-4382003",
-    fullName: "Ayesha Malik",
-    email: "ayesha@example.com",
-    pin: "4321",
-    addresses: [
-      {
-        id: "addr-3",
-        label: "Home",
-        addressLine: "Flat 4, Gulberg III, Main Boulevard, Lahore",
-        landmark: "Behind Xinhua Mall",
-        isDefault: true,
-      },
-    ],
-    defaultAddress: "Flat 4, Gulberg III, Main Boulevard, Lahore",
-    defaultLandmark: "Behind Xinhua Mall",
-    createdAt: new Date().toISOString(),
-  },
-];
+// Initial customers store starts clean for live production delivery
+const INITIAL_CUSTOMERS: RegisteredUserRecord[] = [];
 
 class CustomerAuthStore {
   private currentCustomer: CustomerProfile | null = null;
@@ -65,7 +19,6 @@ class CustomerAuthStore {
   constructor() {
     if (typeof window !== "undefined") {
       this.currentCustomer = this.loadSavedSession();
-      this.ensureDemoUsersExist();
 
       window.addEventListener("storage", (e) => {
         if (e.key === CUSTOMER_SESSION_KEY) {
@@ -284,12 +237,12 @@ class CustomerAuthStore {
   }
 
   private getAllRegisteredUsers(): RegisteredUserRecord[] {
-    if (typeof window === "undefined") return INITIAL_DEMO_CUSTOMERS;
+    if (typeof window === "undefined") return [];
     try {
       const raw = localStorage.getItem(CUSTOMER_USERS_DB_KEY);
-      return raw ? JSON.parse(raw) : INITIAL_DEMO_CUSTOMERS;
+      return raw ? JSON.parse(raw) : [];
     } catch {
-      return INITIAL_DEMO_CUSTOMERS;
+      return [];
     }
   }
 
@@ -297,16 +250,6 @@ class CustomerAuthStore {
     if (typeof window === "undefined") return;
     try {
       localStorage.setItem(CUSTOMER_USERS_DB_KEY, JSON.stringify(users));
-    } catch {}
-  }
-
-  private ensureDemoUsersExist(): void {
-    if (typeof window === "undefined") return;
-    try {
-      const existing = localStorage.getItem(CUSTOMER_USERS_DB_KEY);
-      if (!existing) {
-        localStorage.setItem(CUSTOMER_USERS_DB_KEY, JSON.stringify(INITIAL_DEMO_CUSTOMERS));
-      }
     } catch {}
   }
 

@@ -102,17 +102,15 @@ Respond ONLY with valid JSON in this exact structure:
       return NextResponse.json(parsed);
     }
 
-    // Fallback Mock OCR when GEMINI_API_KEY is not configured yet
-    // Simulates realistic extraction for quick demonstration
-    const mockTid = `PKR-${Date.now().toString().slice(-8)}`;
+    // Production safe fallback when automated OCR API is in review or offline
     return NextResponse.json({
-      matched: true,
-      amount: expectedAmount,
-      tid: mockTid,
-      bankName: "Verified Wallet",
-      timestamp: "Just now",
-      confidence: "HIGH",
-      notes: `Extracted TID ${mockTid}. Amount matches order total of Rs. ${expectedAmount}. (Simulated OCR Mode: set GEMINI_API_KEY in .env for live Gemini Vision).`
+      matched: false,
+      amount: null,
+      tid: null,
+      bankName: "Online Bank / Wallet Transfer",
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      confidence: "LOW",
+      notes: "Payment transfer screenshot submitted successfully. Pending manual verification by cashier at counter."
     });
 
   } catch (error: any) {

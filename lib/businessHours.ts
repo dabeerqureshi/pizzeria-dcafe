@@ -10,20 +10,37 @@ export interface KitchenStatus {
   cutoffMode: "12_midnight" | "12_noon";
 }
 
-export function getKitchenStatus(): KitchenStatus {
-  if (typeof window === "undefined") {
+function getKarachiTime(): { hour: number; minutes: number } {
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Karachi",
+      hour: "numeric",
+      minute: "numeric",
+      hourCycle: "h23",
+    });
+    const parts = formatter.formatToParts(new Date());
+    const hourPart = parts.find((p) => p.type === "hour");
+    const minutePart = parts.find((p) => p.type === "minute");
     return {
-      isOpen: true,
-      reason: "Open for orders",
-      closingTimeStr: "12:00",
-      isOverride: false,
-      overrideValue: "auto",
-      cutoffMode: "12_midnight",
+      hour: hourPart ? parseInt(hourPart.value, 10) : new Date().getHours(),
+      minutes: minutePart ? parseInt(minutePart.value, 10) : new Date().getMinutes(),
     };
+  } catch {
+    const now = new Date();
+    const utcHour = now.getUTCHours();
+    const karachiHour = (utcHour + 5) % 24;
+    return { hour: karachiHour, minutes: now.getUTCMinutes() };
   }
+}
 
-  const storedOverride = (localStorage.getItem(KITCHEN_OVERRIDE_KEY) || "auto") as "auto" | "forced_open" | "forced_closed";
-  const storedCutoffMode = (localStorage.getItem(KITCHEN_CUTOFF_MODE_KEY) || "12_midnight") as "12_midnight" | "12_noon";
+export function getKitchenStatus(): KitchenStatus {
+  let storedOverride: "auto" | "forced_open" | "forced_closed" = "auto";
+  let storedCutoffMode: "12_midnight" | "12_noon" = "12_midnight";
+
+  if (typeof window !== "undefined") {
+    storedOverride = (localStorage.getItem(KITCHEN_OVERRIDE_KEY) || "auto") as "auto" | "forced_open" | "forced_closed";
+    storedCutoffMode = (localStorage.getItem(KITCHEN_CUTOFF_MODE_KEY) || "12_midnight") as "12_midnight" | "12_noon";
+  }
 
   if (storedOverride === "forced_open") {
     return {
@@ -47,10 +64,8 @@ export function getKitchenStatus(): KitchenStatus {
     };
   }
 
-  // Automatic schedule check
-  const now = new Date();
-  const currentHour = now.getHours(); // 0 to 23
-  const currentMinutes = now.getMinutes();
+  // Automatic schedule check based on Pakistan Standard Time (Asia/Karachi)
+  const { hour: currentHour } = getKarachiTime();
 
   if (storedCutoffMode === "12_noon") {
     // If cutoff is 12:00 PM (noon), after 12:00 PM orders are closed
@@ -66,8 +81,8 @@ export function getKitchenStatus(): KitchenStatus {
       };
     }
   } else {
-    // Standard Late-Night closing: After 12:00 AM Midnight (00:00) until opening time 1:00 PM (13:00)
-    // Between 00:00 and 12:59, kitchen is closed.
+    // Standard Late-Night closing: After 12:00 AM Midnight (00:00) until opening time 12:00 PM (12:00)
+    // Between 00:00 and 11:59 PKT, kitchen is closed.
     const isClosedPastMidnight = currentHour >= 0 && currentHour < 12;
     if (isClosedPastMidnight) {
       return {

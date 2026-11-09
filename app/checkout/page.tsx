@@ -47,7 +47,6 @@ export default function CheckoutPage() {
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isPhoneVerified, setIsPhoneVerified] = useState(Boolean(customer));
-  const [otpDevHint, setOtpDevHint] = useState<string | null>(null);
   const [otpError, setOtpError] = useState<string | null>(null);
 
   // Receipt Upload & AI Verification
@@ -156,10 +155,6 @@ export default function CheckoutPage() {
         setOtpError(data.error || "Failed to dispatch code.");
       } else {
         setOtpSent(true);
-        if (data.devHintCode) {
-          setOtpDevHint(data.devHintCode);
-          setOtpCode(data.devHintCode); // Auto-fill for convenience
-        }
       }
     } catch {
       setOtpError("Network error. Please try again.");
@@ -343,20 +338,18 @@ export default function CheckoutPage() {
               <div className="flex items-center gap-2.5">
                 <Clock8 className="h-5 w-5 text-red-400 shrink-0 animate-pulse" />
                 <div>
-                  <strong>Kitchen Currently Closed:</strong> No orders accepted after 12:00 cutoff.
-                  <p className="text-[11px] text-red-300 mt-0.5">Please WhatsApp us at 0308-4382003 for advance bookings.</p>
+                  <strong>Kitchen Currently Closed:</strong> Orders close after 12:00. Kitchen reopens daily at 12:00 PM.
+                  <p className="text-[11px] text-red-300 mt-0.5">Contact us on WhatsApp for pre-orders & catering inquiries.</p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setKitchenOverride("forced_open");
-                  setKitchenStatus(getKitchenStatus());
-                }}
-                className="rounded-xl bg-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-black transition-colors shrink-0"
+              <a
+                href="https://wa.me/923084382003?text=Hi%20Pizzeria%20D%20Cafe%2C%20I%20would%20like%20to%20place%20an%20order."
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-xl bg-emerald-500/20 px-3 py-1.5 text-xs font-bold text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500 hover:text-black transition-colors shrink-0"
               >
-                ⚡ Test Mode: Open
-              </button>
+                WhatsApp Us
+              </a>
             </div>
           )}
 
@@ -748,11 +741,6 @@ export default function CheckoutPage() {
                               {isVerifyingOtp ? "Verifying..." : "Verify Code"}
                             </button>
                           </div>
-                          {otpDevHint && (
-                            <p className="text-[10px] text-amber-300 font-mono">
-                              [Test Mode Code: {otpDevHint}]
-                            </p>
-                          )}
                         </div>
                       )}
 

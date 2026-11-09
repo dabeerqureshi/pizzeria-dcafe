@@ -240,17 +240,21 @@ export default function KitchenDisplayPage() {
                     ord.fulfillmentType === "pickup"
                       ? "🤝 Handed Over to Customer"
                       : ord.orderStatus === "out_for_delivery"
-                      ? "🚴 Rider En Route"
+                      ? "✅ Dispatched (Click to Complete)"
                       : "📦 Hand to Delivery Rider"
                   }
                   primaryActionColor={
                     ord.fulfillmentType === "pickup"
                       ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
+                      : ord.orderStatus === "out_for_delivery"
+                      ? "bg-slate-750 border border-slate-600 text-emerald-400 hover:bg-slate-700"
                       : "bg-sky-500 text-slate-950 hover:bg-sky-400"
                   }
                   onPrimaryAction={() => {
                     if (ord.fulfillmentType === "pickup") {
                       handleUpdateStatus(ord.id, "picked_up");
+                    } else if (ord.orderStatus === "out_for_delivery") {
+                      handleUpdateStatus(ord.id, "delivered");
                     } else {
                       handleUpdateStatus(ord.id, "out_for_delivery");
                     }
