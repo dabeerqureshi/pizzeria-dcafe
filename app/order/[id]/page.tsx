@@ -250,24 +250,37 @@ export default function OrderTrackingPage() {
 
       {/* Assigned Delivery Rider Banner (If Delivery & Assigned) */}
       {!isPickup && order.assignedRiderName && !isCancelled && (
-        <div className="rounded-2xl border border-sky-500/40 bg-sky-950/20 p-4 flex items-center justify-between gap-3 shadow-lg">
+        <div className="rounded-2xl border border-sky-500/40 bg-sky-950/20 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/20 text-sky-400 font-black">
               <Bike className="h-5 w-5" />
             </div>
             <div>
-              <span className="text-[10px] uppercase font-bold text-sky-300">Assigned Rider</span>
+              <span className="text-[10px] uppercase font-bold text-sky-300">Assigned Fleet Rider</span>
               <h4 className="text-sm font-black text-white">{order.assignedRiderName}</h4>
-              <p className="text-[11px] text-slate-400">Dispatched from kitchen</p>
+              <p className="text-[11px] text-slate-400">
+                {order.orderStatus === "out_for_delivery" ? "On the way to your address" : "Preparing delivery at kitchen"}
+                {order.dispatchedAt && ` • Dispatched at ${new Date(order.dispatchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+              </p>
             </div>
           </div>
-          <a
-            href="tel:03084382003"
-            className="flex items-center gap-1.5 rounded-xl bg-sky-500 text-slate-950 px-3 py-1.5 text-xs font-black hover:bg-sky-400 transition-colors"
-          >
-            <Phone className="h-3.5 w-3.5" />
-            <span>Call Branch</span>
-          </a>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {order.assignedRiderPhone && (
+              <a
+                href={`tel:${order.assignedRiderPhone.replace(/[^0-9]/g, "")}`}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-sky-500 text-slate-950 px-3.5 py-1.5 text-xs font-black hover:bg-sky-400 transition-colors shadow-md"
+              >
+                <Phone className="h-3.5 w-3.5" />
+                <span>Call Rider</span>
+              </a>
+            )}
+            <a
+              href="tel:03084382003"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 px-3 py-1.5 text-xs font-bold hover:bg-slate-700 transition-colors"
+            >
+              <span>Call Branch</span>
+            </a>
+          </div>
         </div>
       )}
 

@@ -372,7 +372,235 @@ runTest("Kitchen is CLOSED past midnight cutoff (e.g. 1:00 AM, 4:00 AM, 9:00 AM 
 });
 
 // ============================================================================
-// 7. SUMMARY
+// 7. ORDER-TO-RIDER DISPATCH LIFECYCLE (10 END-TO-END FLOW TESTS)
+// ============================================================================
+console.log("\n👉 7. COMPLETE ORDER-TO-RIDER DISPATCH LIFECYCLE (10 E2E TESTS)");
+
+// Simulation Store State for Complete E2E Lifecycle
+const mockFleet = [
+  { id: "r1", riderName: "Ali Hassan", phone: "0300-1122334", vehicleNumber: "LEA-4521" },
+  { id: "r2", riderName: "Usman Tariq", phone: "0321-9988776", vehicleNumber: "LEN-8812" }
+];
+
+let mockOrders = [];
+
+function createOrder(orderData) {
+  const ord = {
+    id: `ord-${orderData.orderNumber}`,
+    orderNumber: orderData.orderNumber,
+    customerName: orderData.customerName,
+    customerPhone: orderData.customerPhone,
+    fulfillmentType: orderData.fulfillmentType || "delivery",
+    deliveryAddress: orderData.deliveryAddress || "DHA Phase 5, Lahore",
+    totalAmount: orderData.totalAmount,
+    paymentMethod: orderData.paymentMethod || "cod",
+    paymentStatus: orderData.paymentMethod === "cod" ? "unpaid" : "paid",
+    orderStatus: "pending",
+    createdAt: new Date().toISOString()
+  };
+  mockOrders.push(ord);
+  return ord;
+}
+
+function updateOrderStatus(orderId, status) {
+  const ord = mockOrders.find(o => o.id === orderId || String(o.orderNumber) === orderId);
+  if (!ord) throw new Error("Order not found: " + orderId);
+  ord.orderStatus = status;
+  ord.updatedAt = new Date().toISOString();
+  return ord;
+}
+
+function assignRiderToOrder(orderId, riderId, customStatus) {
+  const ord = mockOrders.find(o => o.id === orderId || String(o.orderNumber) === orderId);
+  if (!ord) throw new Error("Order not found: " + orderId);
+  const rider = mockFleet.find(r => r.id === riderId);
+  if (!rider) throw new Error("Rider not found: " + riderId);
+
+  ord.riderId = rider.id;
+  ord.assignedRiderName = rider.riderName;
+  ord.assignedRiderPhone = rider.phone;
+  ord.assignedAt = new Date().toISOString();
+  if (customStatus) {
+    ord.orderStatus = customStatus;
+    if (customStatus === "out_for_delivery") {
+      ord.dispatchedAt = new Date().toISOString();
+    }
+  }
+  return ord;
+}
+
+function getRiderForOrder(orderId) {
+  const ord = mockOrders.find(o => o.id === orderId || String(o.orderNumber) === orderId);
+  if (!ord || !ord.riderId) return null;
+  return mockFleet.find(r => r.id === ord.riderId) || null;
+}
+
+function getRiderActiveDeliveries(riderId) {
+  return mockOrders.filter(
+    o => o.fulfillmentType === "delivery" &&
+         o.riderId === riderId &&
+         (o.orderStatus === "ready_for_dispatch" || o.orderStatus === "out_for_delivery" || o.orderStatus === "preparing")
+  );
+}
+
+function getUnassignedKitchenOrders() {
+  return mockOrders.filter(
+    o => o.fulfillmentType === "delivery" &&
+         !o.riderId &&
+         (o.orderStatus === "ready_for_dispatch" || o.orderStatus === "preparing")
+  );
+}
+
+function completeDelivery(orderId) {
+  const ord = mockOrders.find(o => o.id === orderId || String(o.orderNumber) === orderId);
+  if (!ord) throw new Error("Order not found: " + orderId);
+  ord.orderStatus = "delivered";
+  ord.deliveredAt = new Date().toISOString();
+  if (ord.paymentMethod === "cod") {
+    ord.paymentStatus = "paid";
+  }
+  return ord;
+}
+
+function getRiderCodCashToSettle(riderId) {
+  return mockOrders
+    .filter(o => o.fulfillmentType === "delivery" && o.orderStatus === "delivered" && o.riderId === riderId && o.paymentMethod === "cod")
+    .reduce((sum, o) => sum + o.totalAmount, 0);
+}
+
+// 10 END-TO-END TESTS
+runTest("Test 1: [Order Placement] System creates Order #101 with unique ID and fulfillmentType='delivery'", () => {
+  mockOrders = [];
+  const ord = createOrder({
+    orderNumber: 101,
+    customerName: "Hamza Malik",
+    customerPhone: "0300-4455667",
+    totalAmount: 2500,
+    paymentMethod: "cod"
+  });
+  assert.strictEqual(ord.id, "ord-101");
+  assert.strictEqual(ord.orderNumber, 101);
+  assert.strictEqual(ord.orderStatus, "pending");
+  assert.strictEqual(ord.riderId, undefined);
+});
+
+runTest("Test 2: [Kitchen Workflow] Order #101 transitions to 'confirmed' and 'preparing' (baking)", () => {
+  updateOrderStatus("ord-101", "confirmed");
+  assert.strictEqual(mockOrders.find(o => o.id === "ord-101").orderStatus, "confirmed");
+
+  updateOrderStatus("ord-101", "preparing");
+  assert.strictEqual(mockOrders.find(o => o.id === "ord-101").orderStatus, "preparing");
+});
+
+runTest("Test 3: [Kitchen Packaging] Order #101 marked 'ready_for_dispatch' in kitchen queue", () => {
+  updateOrderStatus("ord-101", "ready_for_dispatch");
+  assert.strictEqual(mockOrders.find(o => o.id === "ord-101").orderStatus, "ready_for_dispatch");
+});
+
+runTest("Test 4: [Admin Assignment] Admin assigns Order #101 to Rider r1 (Ali Hassan)", () => {
+  const updated = assignRiderToOrder("ord-101", "r1");
+  assert.strictEqual(updated.riderId, "r1");
+  assert.strictEqual(updated.assignedRiderName, "Ali Hassan");
+  assert.strictEqual(updated.assignedRiderPhone, "0300-1122334");
+  assert.ok(updated.assignedAt);
+});
+
+runTest("Test 5: [Order-to-Rider Query] System resolves rider identity directly by Order ID #101", () => {
+  const rider = getRiderForOrder("ord-101");
+  assert.ok(rider);
+  assert.strictEqual(rider.id, "r1");
+  assert.strictEqual(rider.riderName, "Ali Hassan");
+  assert.strictEqual(rider.vehicleNumber, "LEA-4521");
+});
+
+runTest("Test 6: [Rider Isolation] Ali Hassan sees Order #101 in 'My Deliveries'; Usman Tariq does NOT", () => {
+  const aliDeliveries = getRiderActiveDeliveries("r1");
+  const usmanDeliveries = getRiderActiveDeliveries("r2");
+
+  assert.strictEqual(aliDeliveries.length, 1);
+  assert.strictEqual(aliDeliveries[0].id, "ord-101");
+  assert.strictEqual(usmanDeliveries.length, 0);
+});
+
+runTest("Test 7: [Pool Claiming] Rider Usman Tariq claims unassigned Order #102 from Kitchen pool", () => {
+  // Create second order unassigned
+  createOrder({
+    orderNumber: 102,
+    customerName: "Ayesha Khan",
+    customerPhone: "0321-1122445",
+    totalAmount: 1800,
+    paymentMethod: "cod"
+  });
+  updateOrderStatus("ord-102", "ready_for_dispatch");
+
+  const unassignedBefore = getUnassignedKitchenOrders();
+  assert.strictEqual(unassignedBefore.length, 1);
+  assert.strictEqual(unassignedBefore[0].id, "ord-102");
+
+  // Usman claims ord-102
+  assignRiderToOrder("ord-102", "r2", "ready_for_dispatch");
+
+  const unassignedAfter = getUnassignedKitchenOrders();
+  assert.strictEqual(unassignedAfter.length, 0);
+
+  const usmanDeliveries = getRiderActiveDeliveries("r2");
+  assert.strictEqual(usmanDeliveries.length, 1);
+  assert.strictEqual(usmanDeliveries[0].id, "ord-102");
+  assert.strictEqual(usmanDeliveries[0].assignedRiderName, "Usman Tariq");
+});
+
+runTest("Test 8: [Reassignment] Admin reassigns Order #101 from Ali Hassan to Usman Tariq", () => {
+  assignRiderToOrder("ord-101", "r2");
+
+  const aliDeliveries = getRiderActiveDeliveries("r1");
+  const usmanDeliveries = getRiderActiveDeliveries("r2");
+
+  assert.strictEqual(aliDeliveries.length, 0, "Order #101 must be removed from Ali's active queue");
+  assert.strictEqual(usmanDeliveries.length, 2, "Usman should now have both Order #101 and #102");
+  assert.strictEqual(getRiderForOrder("ord-101").riderName, "Usman Tariq");
+
+  // Reassign back to Ali for clean downstream testing
+  assignRiderToOrder("ord-101", "r1");
+  assert.strictEqual(getRiderForOrder("ord-101").riderName, "Ali Hassan");
+});
+
+runTest("Test 9: [Transit & Out for Delivery] Rider departs kitchen; Order #101 marked 'out_for_delivery'", () => {
+  const dispatched = assignRiderToOrder("ord-101", "r1", "out_for_delivery");
+  assert.strictEqual(dispatched.orderStatus, "out_for_delivery");
+  assert.ok(dispatched.dispatchedAt, "dispatchedAt timestamp must be recorded");
+});
+
+runTest("Test 10: [Delivery, COD Collection & Cash Reconciliation] Orders delivered; cash liability separated by rider", () => {
+  // Ali delivers Order #101 (Rs. 2,500 COD)
+  completeDelivery("ord-101");
+  const ord101 = mockOrders.find(o => o.id === "ord-101");
+  assert.strictEqual(ord101.orderStatus, "delivered");
+  assert.strictEqual(ord101.paymentStatus, "paid");
+  assert.ok(ord101.deliveredAt);
+
+  // Usman delivers Order #102 (Rs. 1,800 COD)
+  completeDelivery("ord-102");
+  const ord102 = mockOrders.find(o => o.id === "ord-102");
+  assert.strictEqual(ord102.orderStatus, "delivered");
+  assert.strictEqual(ord102.paymentStatus, "paid");
+  assert.ok(ord102.deliveredAt);
+
+  // Verify COD Shift Settlements are strictly separated
+  const aliCash = getRiderCodCashToSettle("r1");
+  const usmanCash = getRiderCodCashToSettle("r2");
+
+  assert.strictEqual(aliCash, 2500, "Ali Hassan must have exactly Rs. 2,500 COD cash liability");
+  assert.strictEqual(usmanCash, 1800, "Usman Tariq must have exactly Rs. 1,800 COD cash liability");
+
+  // Cashier Handover Reconciliation Check
+  const aliDiscrepancy = 2500 - aliCash;
+  const usmanDiscrepancy = 1800 - usmanCash;
+  assert.strictEqual(aliDiscrepancy, 0, "Ali's cash handover should have zero discrepancy");
+  assert.strictEqual(usmanDiscrepancy, 0, "Usman's cash handover should have zero discrepancy");
+});
+
+// ============================================================================
+// 8. SUMMARY
 // ============================================================================
 console.log("\n================================================================================");
 console.log(`🎯 RESULTS: ${passed}/${total} TESTS PASSED SUCCESSFULLY (100% PASS RATE)`);

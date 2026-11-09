@@ -15,7 +15,25 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "Pizzeria D Café | Freshly Baked Artisanal Pizzas & Fast Food",
-  description: "Official online ordering for Pizzeria D Café. House Specials, Meltzilla Monster, Zingers, Wraps, and Loaded Fries with fast delivery.",
+  description: "Official online ordering for Pizzeria D Café Lahore. House Specials, Meltzilla Monster, Zingers, Wraps, and Loaded Fries with fast delivery.",
+  applicationName: "Pizzeria D Café",
+  authors: [{ name: "Pizzeria D Café" }],
+  keywords: ["Pizzeria D Cafe", "Lahore pizza delivery", "Meltzilla Monster", "Stuffed crust", "Zinger burgers", "Pizza fries"],
+  icons: {
+    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍕</text></svg>",
+  },
+  openGraph: {
+    title: "Pizzeria D Café | Freshly Baked Artisanal Pizzas & Fast Food",
+    description: "Order fresh stuffed crust pizzas, Meltzilla Monsters, Zingers & Loaded Fries online. Hotline: 0308-4382003.",
+    siteName: "Pizzeria D Café",
+    locale: "en_PK",
+    type: "website",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Pizzeria D Café",
+  },
 };
 
 export default function RootLayout({

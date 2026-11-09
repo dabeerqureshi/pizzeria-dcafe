@@ -175,6 +175,10 @@ export interface Order {
   notes?: string;
   riderId?: string;
   assignedRiderName?: string;
+  assignedRiderPhone?: string;
+  assignedAt?: string;
+  dispatchedAt?: string;
+  deliveredAt?: string;
   items: {
     id: string;
     menuItemId: string;

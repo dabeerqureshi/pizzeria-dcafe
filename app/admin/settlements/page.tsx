@@ -33,7 +33,7 @@ export default function CodSettlementPage() {
     (o) =>
       o.fulfillmentType === "delivery" &&
       o.orderStatus === "delivered" &&
-      (o.riderId === activeRider.id || !o.riderId)
+      o.riderId === activeRider.id
   );
 
   const codOrders = riderDeliveredOrders.filter((o) => o.paymentMethod === "cod");
@@ -179,6 +179,28 @@ export default function CodSettlementPage() {
                   <p className="text-[10px] text-slate-500">No cash collected</p>
                 </div>
               </div>
+
+              {/* Order IDs Breakdown */}
+              {riderDeliveredOrders.length > 0 && (
+                <div className="rounded-xl bg-slate-900/60 border border-slate-800 p-3 mb-5 space-y-1.5">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">
+                    Delivered Order IDs in this Shift ({riderDeliveredOrders.length})
+                  </span>
+                  <div className="max-h-36 overflow-y-auto space-y-1 divide-y divide-slate-800/60">
+                    {riderDeliveredOrders.map((ord) => (
+                      <div key={ord.id} className="flex items-center justify-between pt-1 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-white">#{ord.orderNumber}</span>
+                          <span className="text-slate-400 text-[11px] truncate max-w-[120px]">{ord.customerName}</span>
+                        </div>
+                        <span className={`font-mono text-xs font-bold ${ord.paymentMethod === 'cod' ? 'text-amber-400' : 'text-emerald-400'}`}>
+                          {ord.paymentMethod === 'cod' ? formatPKR(ord.totalAmount) : 'Paid Online'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Form to Record Handover */}
               <form onSubmit={handleSettleShift} className="space-y-4">

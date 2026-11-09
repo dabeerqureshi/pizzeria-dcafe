@@ -155,16 +155,53 @@ class OrderStore {
     this.broadcast({ type: "ORDER_UPDATE" });
   }
 
-  public assignRider(orderId: string, riderId: string, riderName: string): void {
+  public assignRider(
+    orderId: string,
+    riderId: string,
+    riderName?: string,
+    riderPhone?: string,
+    newStatus?: OrderStatus
+  ): void {
     const orders = this.getLocalOrders();
-    const index = orders.findIndex(o => o.id === orderId);
+    const index = orders.findIndex(o => o.id === orderId || String(o.orderNumber) === orderId);
+    if (index === -1) return;
+
+    const matchedRider = FLEET_RIDERS.find(r => r.id === riderId);
+    const finalName = riderName || matchedRider?.riderName || "Assigned Rider";
+    const finalPhone = riderPhone || matchedRider?.phone || "";
+
+    const currentOrder = orders[index];
+    const targetStatus = newStatus || (currentOrder.orderStatus === "out_for_delivery" ? "out_for_delivery" : "ready_for_dispatch");
+
+    orders[index] = {
+      ...currentOrder,
+      riderId,
+      assignedRiderName: finalName,
+      assignedRiderPhone: finalPhone,
+      assignedAt: currentOrder.assignedAt || new Date().toISOString(),
+      orderStatus: targetStatus,
+      dispatchedAt: targetStatus === "out_for_delivery" ? (currentOrder.dispatchedAt || new Date().toISOString()) : currentOrder.dispatchedAt,
+      updatedAt: new Date().toISOString()
+    };
+
+    this.saveOrders(orders);
+    if (isSupabaseConfigured && supabase) {
+      supabase.from("orders").update({ order_status: targetStatus }).eq("id", currentOrder.id).then(() => {});
+    }
+    this.broadcast({ type: "ORDER_UPDATE" });
+  }
+
+  public unassignRider(orderId: string): void {
+    const orders = this.getLocalOrders();
+    const index = orders.findIndex(o => o.id === orderId || String(o.orderNumber) === orderId);
     if (index === -1) return;
 
     orders[index] = {
       ...orders[index],
-      riderId,
-      assignedRiderName: riderName,
-      orderStatus: "out_for_delivery",
+      riderId: undefined,
+      assignedRiderName: undefined,
+      assignedRiderPhone: undefined,
+      assignedAt: undefined,
       updatedAt: new Date().toISOString()
     };
 
@@ -172,19 +209,45 @@ class OrderStore {
     this.broadcast({ type: "ORDER_UPDATE" });
   }
 
+  public startRiderDelivery(orderId: string): void {
+    const orders = this.getLocalOrders();
+    const index = orders.findIndex(o => o.id === orderId || String(o.orderNumber) === orderId);
+    if (index === -1) return;
+
+    orders[index] = {
+      ...orders[index],
+      orderStatus: "out_for_delivery",
+      dispatchedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    this.saveOrders(orders);
+    if (isSupabaseConfigured && supabase) {
+      supabase.from("orders").update({ order_status: "out_for_delivery" }).eq("id", orders[index].id).then(() => {});
+    }
+    this.broadcast({ type: "ORDER_UPDATE" });
+  }
+
   public markRiderDelivered(orderId: string): void {
     const orders = this.getLocalOrders();
-    const index = orders.findIndex(o => o.id === orderId);
+    const index = orders.findIndex(o => o.id === orderId || String(o.orderNumber) === orderId);
     if (index === -1) return;
 
     orders[index] = {
       ...orders[index],
       orderStatus: "delivered",
       paymentStatus: orders[index].paymentMethod === "cod" ? "paid" : orders[index].paymentStatus,
+      deliveredAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
 
     this.saveOrders(orders);
+    if (isSupabaseConfigured && supabase) {
+      supabase.from("orders").update({
+        order_status: "delivered",
+        payment_status: orders[index].paymentStatus
+      }).eq("id", orders[index].id).then(() => {});
+    }
     this.broadcast({ type: "ORDER_UPDATE" });
   }
 

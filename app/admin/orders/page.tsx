@@ -9,7 +9,7 @@ import {
   Check, X, Eye, Sparkles, AlertTriangle, ArrowRight, RefreshCw, 
   UtensilsCrossed, ShieldCheck, Phone, MapPin, Search, Power, Clock8, AlertCircle, LogOut
 } from "lucide-react";
-import { orderStore } from "@/lib/store/orderStore";
+import { orderStore, FLEET_RIDERS } from "@/lib/store/orderStore";
 import { Order, OrderStatus } from "@/lib/types";
 import { formatPKR } from "@/lib/utils";
 import KitchenSlip from "@/components/admin/KitchenSlip";
@@ -96,6 +96,14 @@ export default function AdminOrdersPage() {
   }, [soundEnabled]);
 
   const handleStatusChange = (orderId: string, nextStatus: OrderStatus) => {
+    if (nextStatus === "out_for_delivery") {
+      const order = orders.find(o => o.id === orderId);
+      if (order && !order.riderId && order.fulfillmentType === "delivery") {
+        // Auto-assign default fleet rider so order ID always has a rider attached
+        orderStore.assignRider(orderId, FLEET_RIDERS[0].id, FLEET_RIDERS[0].riderName, FLEET_RIDERS[0].phone, "out_for_delivery");
+        return;
+      }
+    }
     orderStore.updateOrderStatus(orderId, nextStatus);
   };
 
@@ -798,6 +806,52 @@ function KanbanColumn({
                   </button>
                 )}
               </div>
+
+              {/* Delivery Rider Assignment Control */}
+              {ord.fulfillmentType === "delivery" && (
+                <div className="pt-2 border-t border-slate-800/80">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[9px] uppercase font-bold text-sky-400 flex items-center gap-1">
+                      <Bike className="h-3 w-3" />
+                      Assigned Rider:
+                    </label>
+                    {ord.assignedRiderName ? (
+                      <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/15 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                        {ord.assignedRiderName}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/30">
+                        Unassigned
+                      </span>
+                    )}
+                  </div>
+                  <select
+                    value={ord.riderId || ""}
+                    onChange={(e) => {
+                      const rId = e.target.value;
+                      if (!rId) {
+                        orderStore.unassignRider(ord.id);
+                      } else {
+                        const matched = FLEET_RIDERS.find((r) => r.id === rId);
+                        orderStore.assignRider(
+                          ord.id,
+                          rId,
+                          matched?.riderName,
+                          matched?.phone
+                        );
+                      }
+                    }}
+                    className="w-full rounded-xl border border-sky-500/30 bg-sky-950/30 px-2 py-1.5 text-xs text-sky-200 focus:border-sky-400 focus:outline-none"
+                  >
+                    <option value="">-- Choose Rider --</option>
+                    {FLEET_RIDERS.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.riderName} ({r.vehicleNumber})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Status Quick Switch Dropdown */}
               <div className="pt-1">

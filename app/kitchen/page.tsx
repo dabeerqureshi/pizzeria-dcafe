@@ -378,9 +378,19 @@ function KdsTicketCard({
 
       {/* Address if delivery */}
       {!isPickup && order.deliveryAddress && (
-        <p className="mb-3 text-[11px] text-slate-400 truncate">
+        <p className="mb-2 text-[11px] text-slate-400 truncate">
           📍 {order.deliveryAddress} {order.landmark ? `(${order.landmark})` : ""}
         </p>
+      )}
+
+      {/* Assigned Rider Info if delivery */}
+      {!isPickup && (
+        <div className="mb-3 flex items-center justify-between text-[11px] px-2 py-1.5 rounded-lg bg-sky-950/40 border border-sky-500/30">
+          <span className="text-slate-400 font-medium">Assigned Rider:</span>
+          <span className="font-bold text-sky-300">
+            {order.assignedRiderName ? `🛵 ${order.assignedRiderName}` : "⚠️ Unassigned (Waiting for Rider)"}
+          </span>
+        </div>
       )}
 
       {/* Big Touch Action Button */}
