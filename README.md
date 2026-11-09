@@ -52,10 +52,31 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 - **Customer Storefront**: `/` (Browse House Specials, Meltzilla Monster, Zingers, Wraps, Fries)
 - **Checkout**: `/checkout` (Delivery address, COD or Online Transfer, screenshot upload & AI verification)
-- **Live Order Tracker**: `/order/[id]` (Real-time progress, receipt breakdown, 1-click WhatsApp backup)
-- **Kitchen Live Kanban**: `/admin/orders` (Sound chimes, order cards, receipt verification, status pipeline)
+- **Live Order Tracker**: `/order/[id]` (Real-time progress, assigned fleet rider details, counter pickup code)
+- **Kitchen Screen (KDS)**: `/kitchen` (High-contrast oven screen, audio chimes, fulfillment filters)
+- **Rider Dispatch Fleet**: `/rider` (Assigned deliveries, claim kitchen orders, turn-by-turn navigation, COD collection)
+- **Kitchen Live Kanban & POS**: `/admin/orders` (Sound chimes, order cards, receipt verification, rider dispatch)
 - **80mm Thermal Receipt**: `/admin/orders/print/[id]` (1-click counter slip print)
 - **Stock Manager**: `/admin/menu` (1-click Sold Out toggles)
+- **End-of-Shift COD Settlements**: `/admin/settlements` (Rider cash hand-in reconciliation & audit history)
+- **Admin Login**: `/admin/login` (Default username: `admin` • Default password: `pizzeria123`)
+
+---
+
+## 🧪 Testing & CI Verification
+
+```bash
+# Run the 34-test end-to-end automated verification suite
+npm test
+
+# Run strict TypeScript typecheck (0 errors)
+npm run typecheck
+
+# Production build verification (20/20 routes optimized)
+npm run build
+```
+
+GitHub Actions automatically runs the Production Quality Gate on every Push and Pull Request (`.github/workflows/production-gate.yml`).
 
 ---
 
